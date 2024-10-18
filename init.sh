@@ -1,179 +1,248 @@
 #!/bin/bash
-#
 
-DEPLOYED="true"
-PROJECTNAME="xpertshandsonlabs"
-LOCATION="eastus"
-
-ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519
-ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519-docs
-ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519-theme
-ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519-cloud
-ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519-ot
-ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519-sase
-ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519-secops
-ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519-references
-
-# Log in to Azure if not already logged in
-az account show &> /dev/null
-if [ $? -ne 0 ]; then
-  echo "You are not logged in to Azure. Logging in..."
-  az login --use-device-code
+# Ensure the contentrepos.json file exists
+if [ ! -f contentrepos.json ]; then
+  echo "Error: contentrepos.json file not found. Exiting."
+  exit 1
 fi
 
-# Fetch and display the current default subscription
-CURRENT_SUBSCRIPTION_NAME=$(az account show --query "name" --output tsv)
-CURRENT_SUBSCRIPTION_ID=$(az account show --query "id" --output tsv)
+# Constants
+DEPLOYED=$(jq -r '.DEPLOYED' contentrepos.json)
+PROJECT_NAME=$(jq -r '.PROJECT_NAME' contentrepos.json)
+LOCATION=$(jq -r '.LOCATION' contentrepos.json)
+CONTENTREPOS=($(jq -r '.REPOS[]' contentrepos.json))
 
-echo "Current default subscription is: $CURRENT_SUBSCRIPTION_NAME (ID: $CURRENT_SUBSCRIPTION_ID)"
+# Check if variables were properly initialized
+if [ -z "$DEPLOYED" ] || [ -z "$PROJECT_NAME" ] || [ -z "$LOCATION" ] || [ ${#CONTENTREPOS[@]} -eq 0 ]; then
+  echo "Error: Failed to initialize variables from contentrepos.json. Exiting."
+  exit 1
+fi
 
-# Prompt the user to confirm if they want to use the current default subscription
-read -p "Do you want to use this subscription as default (y/n)? " CONFIRM
+MAX_RETRIES=2
+RETRY_DELAY=10
 
-if [[ "$CONFIRM" =~ ^[Yy]$ ]]; then
-  SUBSCRIPTIONID=$CURRENT_SUBSCRIPTION_ID
-else
-  # List available subscriptions
-  echo "Fetching available subscriptions..."
-  az account list --query '[].{Name:name, ID:id}' --output table
+# Extract GitHub organization and control repo
+GITHUB_ORG=$(git config --get remote.origin.url | sed -n 's#.*/\([^/]*\)/.*#\1#p')
+CONTROL_REPO=$(git config --get remote.origin.url | sed -n 's#.*/\([^/]*\)\.git#\1#p')
 
-  # Prompt user to select a new default subscription by name
-  read -p "Enter the name of the subscription you want to set as default: " SUBSCRIPTION_NAME
+if [ -z "$GITHUB_ORG" ]; then
+  echo "Could not detect GitHub organization. Exiting."
+  exit 1
+fi
 
-  # Set the new default subscription and store its ID
-  SUBSCRIPTIONID=$(az account list --query "[?name=='$SUBSCRIPTION_NAME'].id" --output tsv)
+# Function to ensure the user is authenticated to GitHub
+function ensure_github_login() {
+  gh auth status &>/dev/null
+  if [ $? -ne 0 ]; then
+    gh auth login
+    if [ $? -ne 0 ]; then
+      echo "GitHub login failed. Exiting."
+      exit 1
+    fi
+  fi
+}
 
-  if [ -z "$SUBSCRIPTIONID" ]; then
-    echo "Invalid subscription name. Exiting."
+# Function to check if a GitHub repository exists
+function repo_exists() {
+  local repo=$1
+  gh repo view "${GITHUB_ORG}/${repo}" &>/dev/null
+  return $?
+}
+
+# Function to create a GitHub repository
+function create_github_repo() {
+  local repo=$1
+  gh_command_retry "gh repo create ${GITHUB_ORG}/${repo} --private"
+}
+
+# Function to retry GitHub commands with a retry mechanism, suppressing errors until max retries
+function gh_command_retry() {
+  local cmd=$1
+  local retries=0
+  local output
+
+  until [ $retries -ge $MAX_RETRIES ]; do
+    output=$(eval "$cmd" 2>&1)
+    local exit_code=$?
+    
+    if [ $exit_code -eq 0 ]; then
+      return 0
+    elif [ $exit_code -ge 500 ]; then
+      echo "Server-side error (5xx). Retrying in $RETRY_DELAY seconds..."
+    else
+      echo "GitHub command failed. Retrying in $RETRY_DELAY seconds..."
+    fi
+    
+    retries=$((retries + 1))
+    sleep $RETRY_DELAY
+  done
+
+  echo "GitHub command failed after $MAX_RETRIES attempts."
+  echo "Error output from the last attempt:"
+  echo "$output"
+  exit 1
+}
+
+# Function to check and create repositories if needed
+function check_and_create_repos() {
+  for repo in "${CONTENTREPOS[@]}"; do
+    if ! repo_exists "$repo"; then
+      echo "Repository '$repo' does not exist in organization '$GITHUB_ORG'."
+      read -p "Do you want to create this repository? (y/n): " create_repo
+      if [[ "$create_repo" =~ ^[Yy]$ ]]; then
+        create_github_repo "$repo"
+      else
+        echo "Repository creation aborted. Exiting."
+        exit 1
+      fi
+    fi
+  done
+}
+
+# Function to log in to Azure if not already logged in
+function ensure_azure_login() {
+  az account show &>/dev/null
+  if [ $? -ne 0 ]; then
+    az login --use-device-code
+  fi
+}
+
+# Function to select Azure subscription
+function select_subscription() {
+  local current_sub_name current_sub_id confirm subscription_name subscription_id
+
+  current_sub_name=$(az account show --query "name" --output tsv 2>/dev/null)
+  current_sub_id=$(az account show --query "id" --output tsv 2>/dev/null)
+
+  if [ -z "$current_sub_name" ] || [ -z "$current_sub_id" ]; then
+    echo "Failed to retrieve current subscription. Ensure you are logged in to Azure."
     exit 1
   fi
 
-  # Set the subscription as default
-  az account set --subscription "$SUBSCRIPTIONID"
+  echo "Current default subscription: $current_sub_name (ID: $current_sub_id)"
+  read -p "Do you want to use this subscription as default (y/n)? " confirm
 
-  echo "Subscription '$SUBSCRIPTION_NAME' is now set as the default with ID: $SUBSCRIPTIONID"
-fi
+  if [[ "$confirm" =~ ^[Yy]$ ]]; then
+    SUBSCRIPTION_ID="$current_sub_id"
+  else
+    az account list --query '[].{Name:name, ID:id}' --output table
+    read -p "Enter the name of the subscription you want to set as default: " subscription_name
+    SUBSCRIPTION_ID=$(az account list --query "[?name=='$subscription_name'].id" --output tsv 2>/dev/null)
+    if [ -z "$SUBSCRIPTION_ID" ]; then
+      echo "Invalid subscription name. Exiting."
+      exit 1
+    fi
+    az account set --subscription "$SUBSCRIPTION_ID"
+  fi
+}
 
-echo "Using Subscription ID: $SUBSCRIPTIONID"
+# Function to create SSH keys for repositories if they don't already exist
+function generate_ssh_keys() {
+  for repo in "${CONTENTREPOS[@]}"; do
+    local key_path="$HOME/.ssh/id_ed25519-$repo"
+    if [ ! -f "$key_path" ]; then
+      ssh-keygen -t ed25519 -N '' -f "$key_path" -q
+      echo "SSH key generated for $repo."
+    else
+      echo "SSH key already exists for $repo. Skipping generation."
+    fi
+  done
+}
 
-gh auth login
+# Function to create Azure resources for Terraform state storage
+function create_azure_resources() {
+  az group create -n "${PROJECT_NAME}-tfstate-RG" -l ${LOCATION}
+  az storage account create -n "${PROJECT_NAME}account" -g "${PROJECT_NAME}-tfstate-RG" -l ${LOCATION} --sku Standard_LRS
+  az storage container create -n "${PROJECT_NAME}tfstate" --account-name "${PROJECT_NAME}account" --auth-mode login
+}
 
-USERNAME=$(az ad signed-in-user show -o json | jq -r '.mail | split("@")[0]')
+# Function to create or use an existing service principal and assign roles
+function create_service_principal() {
+  az ad sp create-for-rbac --name ${PROJECT_NAME} --role Contributor --scopes "/subscriptions/${1}" --json-auth > creds.json
+  sp_output=$(cat creds.json)
+  echo "Service Principal Output:"
+  echo "$sp_output"
 
-# Create an Azure Resource group to store the Terraform state.
-az group create -n "${PROJECTNAME}-tfstate-RG" -l ${LOCATION}
-az storage account create -n "${PROJECTNAME}account" -g "${PROJECTNAME}-tfstate-RG" -l ${LOCATION} --sku Standard_LRS
-az storage container create -n "${PROJECTNAME}tfstate" --account-name "${PROJECTNAME}account" --auth-mode login
+  if echo "$sp_output" | grep -q "Found an existing application instance"; then
+    echo "Service principal already exists. Proceeding to fetch client ID."
+    client_id=$(az ad sp list --display-name ${PROJECT_NAME} --query "[0].appId" --output tsv)
+    if [ -z "$client_id" ]; then
+      echo "Error: Failed to retrieve the client ID of the existing service principal. Exiting."
+      exit 1
+    fi
+  else
+    client_id=$(echo "$sp_output" | jq -r .clientId)
+  fi
 
-# Create a service principal
-#az ad sp create-for-rbac --name ${PROJECTNAME} --role Contributor --role acrpush --scopes "/subscriptions/${SUBSCRIPTIONID}" --json-auth > creds.json
-az ad sp create-for-rbac --name ${PROJECTNAME} --role Contributor --scopes "/subscriptions/${SUBSCRIPTIONID}" --json-auth > creds.json
-az role assignment create --assignee "$(jq -r .clientId creds.json)" --role "User Access Administrator" --scope "/subscriptions/${SUBSCRIPTIONID}"
-#az role assignment create --scope "/subscriptions/${SUBSCRIPTIONID}" --role acrpull --assignee "$(jq -r .clientId creds.json)"
+  if [ -z "$client_id" ] || [ "$client_id" == "null" ]; then
+    echo "Error: Failed to retrieve or create the service principal. Exiting."
+    exit 1
+  fi
+  
+  az role assignment create --assignee "$client_id" --role "User Access Administrator" --scope "/subscriptions/$1"
+  if [ $? -ne 0 ]; then
+    echo "Failed to assign the role. Exiting."
+    exit 1
+  fi
+}
 
-# Create GitHub secrets.
-gh secret set AZURE_STORAGE_ACCOUNT_NAME -b "${PROJECTNAME}account"
-sleep 10
-gh secret set TFSTATE_CONTAINER_NAME -b "${PROJECTNAME}tfstate"
-sleep 10
-gh secret set AZURE_RESOURCE_GROUP_NAME -b "${PROJECTNAME}-tfstate-RG"
-sleep 10
-gh secret set ARM_SUBSCRIPTION_ID -b "$(jq -r .subscriptionId creds.json)"
-sleep 10
-gh secret set ARM_TENANT_ID -b "$(jq -r .tenantId creds.json)"
-sleep 10
-gh secret set ARM_CLIENT_ID -b "$(jq -r .clientId creds.json)"
-sleep 10
-gh secret set ARM_CLIENT_SECRET -b "$(jq -r .clientSecret creds.json)"
-sleep 10
-gh secret set AZURE_CREDENTIALS -b "$(jq -c . creds.json)"
-sleep 10
-gh secret set ACR_REGISTRY -b "${PROJECTNAME}.azurecr.io"
-sleep 10
-gh secret set PROJECTNAME -b "${PROJECTNAME}"
-sleep 10
-gh secret set LOCATION -b "${LOCATION}"
-sleep 10
-read -p "enter github PAT" PAT
-gh secret set PAT -b "${PAT}" --repo amerintlxperts/theme
-sleep 10
-gh secret set PAT -b "${PAT}" --repo amerintlxperts/cloud
-sleep 10
-gh secret set PAT -b "${PAT}" --repo amerintlxperts/ot
-sleep 10
-gh secret set PAT -b "${PAT}" --repo amerintlxperts/secops
-sleep 10
-gh secret set PAT -b "${PAT}" --repo amerintlxperts/sase
-sleep 10
-gh secret set PAT -b "${PAT}" --repo amerintlxperts/references
-sleep 10
-gh secret set PAT -b "${PAT}" --repo amerintlxperts/.github
-sleep 10
+# Function to create GitHub secrets with retry
+function create_github_secrets() {
+  local secret_key
 
-KEY=$(cat ~/.ssh/id_ed25519-theme)
-gh secret set THEME_SSH_PRIVATE_KEY -b "${KEY}"
-sleep 10
+  gh_command_retry "gh secret set AZURE_STORAGE_ACCOUNT_NAME -b '${PROJECT_NAME}account'"
+  gh_command_retry "gh secret set TFSTATE_CONTAINER_NAME -b '${PROJECT_NAME}tfstate'"
+  gh_command_retry "gh secret set AZURE_RESOURCE_GROUP_NAME -b '${PROJECT_NAME}-tfstate-RG'"
+  gh_command_retry "gh secret set ARM_SUBSCRIPTION_ID -b '$(jq -r .subscriptionId creds.json)'"
+  gh_command_retry "gh secret set ARM_TENANT_ID -b '$(jq -r .tenantId creds.json)'"
+  gh_command_retry "gh secret set ARM_CLIENT_ID -b '$(jq -r .clientId creds.json)'"
+  gh_command_retry "gh secret set ARM_CLIENT_SECRET -b '$(jq -r .clientSecret creds.json)'"
+  gh_command_retry "gh secret set AZURE_CREDENTIALS -b '$(jq -c . creds.json)'"
+  gh_command_retry "gh secret set ACR_REGISTRY -b '${PROJECT_NAME}.azurecr.io'"
+  gh_command_retry "gh secret set PROJECTNAME -b '${PROJECT_NAME}'"
+  gh_command_retry "gh secret set LOCATION -b '${LOCATION}'"
 
-KEY=$(cat ~/.ssh/id_ed25519-sase)
-gh secret set SASE_SSH_PRIVATE_KEY -b "${KEY}"
-sleep 10
+  read -p "Enter GitHub PAT: " PAT
+  for repo in "${CONTENTREPOS[@]}"; do
+    gh_command_retry "gh secret set PAT -b '$PAT' --repo '${GITHUB_ORG}/$repo'"
+  done
+  gh_command_retry "gh secret set PAT -b '$PAT' --repo '${GITHUB_ORG}/${CONTROL_REPO}'"
 
-KEY=$(cat ~/.ssh/id_ed25519-ot)
-gh secret set OT_SSH_PRIVATE_KEY -b "${KEY}"
-sleep 10
+  for repo in "${CONTENTREPOS[@]}"; do
+    secret_key=$(cat $HOME/.ssh/id_ed25519-"$repo")
+    gh_command_retry "gh secret set '${repo^^}_SSH_PRIVATE_KEY' -b '$secret_key'"
+  done
 
-KEY=$(cat ~/.ssh/id_ed25519-cloud)
-gh secret set CLOUD_SSH_PRIVATE_KEY -b "${KEY}"
-sleep 10
+  gh_command_retry "gh variable set DEPLOYED -b '$DEPLOYED'"
+}
 
-KEY=$(cat ~/.ssh/id_ed25519-secops)
-gh secret set SECOPS_SSH_PRIVATE_KEY -b "${KEY}"
-sleep 10
+# Function to handle deploy keys for repositories
+function handle_deploy_keys() {
+  for repo in "${CONTENTREPOS[@]}"; do
+    # Get the deploy key ID if it exists
+    deploy_key_id=$(gh repo deploy-key list --repo "${GITHUB_ORG}/$repo" --json title,id | jq -r '.[] | select(.title == "DEPLOY-KEY") | .id')
 
-KEY=$(cat ~/.ssh/id_ed25519-references)
-gh secret set REFERENCES_SSH_PRIVATE_KEY -b "${KEY}"
-sleep 10
+    # Check if the deploy key exists and delete it if necessary
+    if [ -n "$deploy_key_id" ]; then
+      echo "Deploy key found for '$repo'. Deleting the existing key."
+      gh_command_retry "gh repo deploy-key delete --repo '${GITHUB_ORG}/$repo' '$deploy_key_id'"
+    fi
 
-gh variable set DEPLOYED -b "${DEPLOYED}"
-sleep 10
+    # Add the new deploy key
+    echo "Adding new deploy key for '$repo'."
+    gh_command_retry "gh repo deploy-key add $HOME/.ssh/id_ed25519-'$repo'.pub --title 'DEPLOY-KEY' --repo '${GITHUB_ORG}/$repo'"
+  done
+}
 
-echo "Enter the documentation password"
-gh secret set HTPASSWD
-sleep 10
+# Main execution flow
 
-gh repo deploy-key delete $(gh repo deploy-key list --json title,id | jq -r '.[] | select(.title == "DEPLOY-KEY") | .id')
-sleep 10
-gh repo deploy-key add ~/.ssh/id_ed25519-docs.pub --title "DEPLOY-KEY"
-sleep 10
-
-gh repo deploy-key delete --repo amerintlxperts/theme $(gh repo deploy-key list --repo amerintlxperts/theme --json title,id | jq -r '.[] | select(.title == "DEPLOY-KEY") | .id')
-sleep 10
-gh repo deploy-key add ~/.ssh/id_ed25519-theme.pub --title "DEPLOY-KEY" --repo amerintlxperts/theme
-sleep 10
-
-gh repo deploy-key delete --repo amerintlxperts/ot $(gh repo deploy-key list --repo amerintlxperts/ot --json title,id | jq -r '.[] | select(.title == "DEPLOY-KEY") | .id')
-sleep 10
-gh repo deploy-key add ~/.ssh/id_ed25519-ot.pub --title "DEPLOY-KEY" --repo amerintlxperts/ot
-sleep 10
-
-gh repo deploy-key delete --repo amerintlxperts/cloud $(gh repo deploy-key list --repo amerintlxperts/cloud --json title,id | jq -r '.[] | select(.title == "DEPLOY-KEY") | .id')
-sleep 10
-gh repo deploy-key add ~/.ssh/id_ed25519-cloud.pub --title "DEPLOY-KEY" --repo amerintlxperts/cloud
-sleep 10
-
-gh repo deploy-key delete --repo amerintlxperts/sase $(gh repo deploy-key list --repo amerintlxperts/sase --json title,id | jq -r '.[] | select(.title == "DEPLOY-KEY") | .id')
-sleep 10
-gh repo deploy-key add ~/.ssh/id_ed25519-sase.pub --title "DEPLOY-KEY" --repo amerintlxperts/sase
-sleep 10
-
-gh repo deploy-key delete --repo amerintlxperts/secops $(gh repo deploy-key list --repo amerintlxperts/secops --json title,id | jq -r '.[] | select(.title == "DEPLOY-KEY") | .id')
-sleep 10
-gh repo deploy-key add ~/.ssh/id_ed25519-secops.pub --title "DEPLOY-KEY" --repo amerintlxperts/secops
-sleep 10
-
-gh repo deploy-key delete --repo amerintlxperts/references $(gh repo deploy-key list --repo amerintlxperts/references --json title,id | jq -r '.[] | select(.title == "DEPLOY-KEY") | .id')
-sleep 10
-gh repo deploy-key add ~/.ssh/id_ed25519-references.pub --title "DEPLOY-KEY" --repo amerintlxperts/references
-sleep 10
-
-gh workflow run docs-builder
+ensure_azure_login
+select_subscription
+create_service_principal "$SUBSCRIPTION_ID"
+create_azure_resources
+generate_ssh_keys
+ensure_github_login
+check_and_create_repos
+create_github_secrets
+handle_deploy_keys
+gh_command_retry "gh workflow run docs-builder"

@@ -92,11 +92,7 @@ function clone_and_init_repo() {
 
   for repo in "${CONTENTREPOS[@]}"; do
     # Return to the original working directory at the start of each loop iteration
-    cd "$current_dir" || exit 1
-
-    # Create temporary folder for each repo
-    repo_temp_dir=$(mktemp -d -p "$TEMP_DIR")
-    cd "$repo_temp_dir" || exit 1
+    cd "$TEMP_DIR" || exit 1
 
     # Clone the private repository using the GITHUB_TOKEN
     if ! git clone "https://$github_token@github.com/${GITHUB_ORG}/$repo"; then
@@ -112,18 +108,24 @@ function clone_and_init_repo() {
     # Copy the dispatch.yml file into the .github/workflows directory
     cp "$current_dir/$file" .github/workflows/dispatch.yml
 
-    # Check if there are changes to dispatch.yml
-    if ! git diff --quiet .github/workflows/dispatch.yml; then
-      # Stage the changes, commit, and push
-      git add .github/workflows/dispatch.yml
+    # Check if there are untracked or modified files, then commit and push
+    if [[ -n $(git status --porcelain) ]]; then
+      # Stage all changes
+      git add .
       if git commit -m "Add or update dispatch.yml workflow"; then
         git push origin main || echo "Warning: Failed to push changes to $repo"
       else
         echo "Warning: No changes to commit for $repo"
       fi
+    else
+      echo "No changes detected for $repo"
     fi
   done
+
+  # Return to the original working directory after function is complete
+  cd "$current_dir" || exit 1
 }
+
 
 # Function to log in to Azure if not already logged in
 ensure_azure_login() {
@@ -144,7 +146,8 @@ select_subscription() {
     exit 1
   fi
 
-  read -rp "Use the current default subscription: $current_sub_name (ID: $current_sub_id) (y/n)? " confirm
+  read -rp "Use the current default subscription: $current_sub_name (ID: $current_sub_id) (Y/n)? " confirm
+  confirm=${confirm:-Y}  # Default to 'Y' if the user presses enter
 
   if [[ "$confirm" =~ ^[Yy]$ ]]; then
     SUBSCRIPTION_ID="$current_sub_id"
@@ -219,7 +222,8 @@ update_HTPASSWD() {
     # Check if the secret HTPASSWD exists
     if gh secret list | grep -q '^HTPASSWD\s'; then
         echo "The GitHub secret 'HTPASSWD' already exists."
-        read -p "Do you wish to change it? (Y/N): " response
+        read -p "Do you wish to change it? (N/y): " response
+        response=${response:-N}
         if [[ "$response" =~ ^[Yy]$ ]]; then
             read -sp "Enter new value for HTPASSWD: " new_htpasswd_value
             echo

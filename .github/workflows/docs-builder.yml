@@ -192,7 +192,8 @@ jobs:
       - name: clone repositories
         shell: bash
         run: |
-          git clone git@github.com:${{ github.repository_owner }}/theme.git docs/theme
+          theme_repo_name=$(jq -r '.THEME_REPO_NAME' init.json)
+          git clone git@github.com:${{ github.repository_owner }}/$theme_repo_name.git docs/theme
           mkdocs build -c -d site/
           repos=$(jq -r '.REPOS[]' init.json)
           for repo in $repos; do

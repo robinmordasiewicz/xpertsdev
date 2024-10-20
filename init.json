@@ -2,6 +2,7 @@
   "REPOS": [
     "deletemerepo"
   ],
+  "THEME_REPO_NAME": "docs-theme",
   "DEPLOYED": "true",
   "PROJECT_NAME": "xpertsdev",
   "LOCATION": "eastus"

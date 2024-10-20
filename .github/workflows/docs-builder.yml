@@ -187,12 +187,14 @@ jobs:
             IdentityFile ~/.ssh/id_ed25519
             StrictHostKeyChecking no
           EOF
-          echo '${{ secrets.SSH_PRIVATE_KEY }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519 
-  
+          
       - name: clone repositories
         shell: bash
         run: |
           theme_repo_name=$(jq -r '.THEME_REPO_NAME' init.json)
+          normalized_theme_repo_name=$(echo "$theme_repo_name" | tr '-' '_' | tr '[:lower:]' '[:upper:]')
+          # Correct the syntax for embedding variable in GitHub Secrets
+          echo "${{ secrets[format('{0}_SSH_PRIVATE_KEY', normalized_theme_repo_name)] }}" > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
           git clone git@github.com:${{ github.repository_owner }}/${theme_repo_name}.git docs/theme
           mkdocs build -c -d site/
           repos=$(jq -r '.REPOS[]' init.json)
@@ -200,12 +202,12 @@ jobs:
             mkdir -p "src/${repo}/docs"
             git clone "git@github.com:${{ github.repository_owner }}/${repo}.git" "src/${repo}/docs"
             cp -a docs/theme src/${repo}/docs/
-            echo "---" > /home/runner/work/.github/.github/src/${repo}/mkdocs.yml
-            echo "INHERIT: docs/theme/mkdocs.yml" >> /home/runner/work/.github/.github/src/${repo}/mkdocs.yml
-            cd /home/runner/work/.github/.github/src/${repo} && mkdocs build -d /home/runner/work/.github/.github/build/${repo}
-            mv /home/runner/work/.github/.github/build/${repo} /home/runner/work/.github/.github/site/
+            echo "---" > /home/runner/work/.github/${repo}/mkdocs.yml
+            echo "INHERIT: docs/theme/mkdocs.yml" >> /home/runner/work/.github/${repo}/mkdocs.yml
+            cd /home/runner/work/_temp/${repo} && mkdocs build -d /home/runner/work/.github/build/${repo}
+            mv /home/runner/work/_temp/build/${repo} /home/runner/work/.github/site/
           done
-  
+
       - name: Create htaccess password
         run: |
           htpasswd -b -c .htpasswd ${{ secrets.PROJECTNAME }} ${{ secrets.HTPASSWD }}

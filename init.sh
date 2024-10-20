@@ -311,6 +311,6 @@ generate_ssh_keys
 check_and_create_repos
 update_HTPASSWD
 create_github_secrets
-clone_and_init_repo
 handle_deploy_keys
+clone_and_init_repo
 gh workflow run docs-builder

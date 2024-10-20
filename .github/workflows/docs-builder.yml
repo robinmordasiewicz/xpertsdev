@@ -187,78 +187,23 @@ jobs:
             IdentityFile ~/.ssh/id_ed25519
             StrictHostKeyChecking no
           EOF
+          chmod 600 ~/.ssh/id_ed25519 && echo '${{ secrets.SSH_PRIVATE_KEY }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519 
   
-      - name: clone theme
+      - name: clone repositories
         shell: bash
         run: |
-          echo '${{ secrets.THEME_SSH_PRIVATE_KEY }}' > ~/.ssh/id_ed25519
-          chmod 400 ~/.ssh/id_ed25519
-          git clone git@github.com:amerintlxperts/theme.git docs/theme
-  
-      - name: clone hands on labs
-        shell: bash
-        run: |
-          chmod 600 ~/.ssh/id_ed25519 && echo '${{ secrets.OT_SSH_PRIVATE_KEY }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
-          mkdir -p src/ot/docs && git clone git@github.com:amerintlxperts/ot.git src/ot/docs
-          chmod 600 ~/.ssh/id_ed25519 && echo '${{ secrets.SASE_SSH_PRIVATE_KEY }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
-          mkdir -p src/sase/docs && git clone git@github.com:amerintlxperts/sase.git src/sase/docs
-          chmod 600 ~/.ssh/id_ed25519 && echo '${{ secrets.SECOPS_SSH_PRIVATE_KEY }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
-          mkdir -p src/secops/docs && git clone git@github.com:amerintlxperts/secops.git src/secops/docs
-          chmod 600 ~/.ssh/id_ed25519 && echo '${{ secrets.CLOUD_SSH_PRIVATE_KEY }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
-          mkdir -p src/cloud/docs && git clone git@github.com:amerintlxperts/cloud.git src/cloud/docs
-          chmod 600 ~/.ssh/id_ed25519 && echo '${{ secrets.REFERENCES_SSH_PRIVATE_KEY }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
-          mkdir -p src/references/docs && git clone git@github.com:amerintlxperts/references.git src/references/docs
-  
-      - name: copy theme
-        shell: bash
-        run: |
-          cp -a docs/theme src/cloud/docs/
-          cp -a docs/theme src/ot/docs/
-          cp -a docs/theme src/secops/docs/
-          cp -a docs/theme src/sase/docs/
-          cp -a docs/theme src/references/docs/
-  
-      - name: create indexes
-        shell: bash
-        run: |
-          echo "# Cloud Classes" > src/cloud/docs/index.md
-          echo "# OT Classes" > src/ot/docs/index.md
-          echo "# SecOps Classes" > src/secops/docs/index.md
-          echo "# SASE Classes" > src/sase/docs/index.md
-  
-      - name: Create mkdocs.yml
-        shell: bash
-        run: |
-          echo "---" > /home/runner/work/.github/.github/src/cloud/mkdocs.yml
-          echo "site_name: Cloud Hands on Labs" >> /home/runner/work/.github/.github/src/cloud/mkdocs.yml
-          echo "INHERIT: docs/theme/mkdocs.yml" >> /home/runner/work/.github/.github/src/cloud/mkdocs.yml
-          echo "---" > /home/runner/work/.github/.github/src/ot/mkdocs.yml
-          echo "site_name: OT Hands on Labs" >> /home/runner/work/.github/.github/src/ot/mkdocs.yml
-          echo "INHERIT: docs/theme/mkdocs.yml" >> /home/runner/work/.github/.github/src/ot/mkdocs.yml
-          echo "---" > /home/runner/work/.github/.github/src/sase/mkdocs.yml
-          echo "site_name: SASE Hands on Labs" >> /home/runner/work/.github/.github/src/sase/mkdocs.yml
-          echo "INHERIT: docs/theme/mkdocs.yml" >> /home/runner/work/.github/.github/src/sase/mkdocs.yml
-          echo "---" > /home/runner/work/.github/.github/src/secops/mkdocs.yml
-          echo "site_name: SecOps Hands on Labs" >> /home/runner/work/.github/.github/src/secops/mkdocs.yml
-          echo "INHERIT: docs/theme/mkdocs.yml" >> /home/runner/work/.github/.github/src/secops/mkdocs.yml
-          echo "---" > /home/runner/work/.github/.github/src/references/mkdocs.yml
-          echo "site_name: References" >> /home/runner/work/.github/.github/src/references/mkdocs.yml
-          echo "INHERIT: docs/theme/mkdocs.yml" >> /home/runner/work/.github/.github/src/references/mkdocs.yml
-  
-      - name: Build Docs
-        shell: bash
-        run: |
+          git clone git@github.com:${{ github.repository_owner }}/theme.git docs/theme
           mkdocs build -c -d site/
-          cd /home/runner/work/.github/.github/src/cloud && mkdocs build -d /home/runner/work/.github/.github/build/cloud
-          cd /home/runner/work/.github/.github/src/ot && mkdocs build -d /home/runner/work/.github/.github/build/ot
-          cd /home/runner/work/.github/.github/src/sase && mkdocs build -d /home/runner/work/.github/.github/build/sase
-          cd /home/runner/work/.github/.github/src/secops && mkdocs build -d /home/runner/work/.github/.github/build/secops
-          cd /home/runner/work/.github/.github/src/references && mkdocs build -d /home/runner/work/.github/.github/build/references
-          mv /home/runner/work/.github/.github/build/secops /home/runner/work/.github/.github/site/
-          mv /home/runner/work/.github/.github/build/cloud /home/runner/work/.github/.github/site/
-          mv /home/runner/work/.github/.github/build/sase /home/runner/work/.github/.github/site/
-          mv /home/runner/work/.github/.github/build/ot /home/runner/work/.github/.github/site/
-          mv /home/runner/work/.github/.github/build/references /home/runner/work/.github/.github/site/
+          repos=$(jq -r '.REPOS[]' init.json)
+          for repo in $repos; do
+            mkdir -p "src/$repo/docs"
+            git clone "git@github.com:${{ github.repository_owner }}/$repo.git" "src/$repo/docs"
+            cp -a docs/theme src/$repo/docs/
+            echo "---" > /home/runner/work/.github/.github/src/$repo/mkdocs.yml
+            echo "INHERIT: docs/theme/mkdocs.yml" >> /home/runner/work/.github/.github/src/$repo/mkdocs.yml
+            cd /home/runner/work/.github/.github/src/$repo && mkdocs build -d /home/runner/work/.github/.github/build/$repo
+            mv /home/runner/work/.github/.github/build/$repo /home/runner/work/.github/.github/site/
+          done
   
       - name: Create htaccess password
         run: |

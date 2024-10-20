@@ -23,9 +23,6 @@ if [[ -z "$DEPLOYED" || -z "$PROJECT_NAME" || -z "$LOCATION" || ${#CONTENTREPOS[
   exit 1
 fi
 
-MAX_RETRIES=2
-RETRY_DELAY=10
-
 # Extract GitHub organization and control repo
 GITHUB_ORG=$(git config --get remote.origin.url | sed -n 's#.*/\([^/]*\)/.*#\1#p')
 CONTROL_REPO=$(git config --get remote.origin.url | sed -n 's#.*/\([^/]*\)\.git#\1#p')
@@ -111,20 +108,11 @@ select_subscription() {
   fi
 }
 
-generate_ssh_keys() {
-  for repo in "${CONTENTREPOS[@]}"; do
-    local key_path="$HOME/.ssh/id_ed25519-$repo"
-    if [[ -f "$key_path" ]]; then
-      read -rp "$key_path already exists. Overwrite (y/n)? " overwrite_key
-      if [[ "$overwrite_key" =~ ^[Yy]$ ]]; then
-        ssh-keygen -t ed25519 -N "" -f "$key_path" -q
-      else
-        echo "Using existing key for $repo"
-      fi
-    else
-      ssh-keygen -t ed25519 -N "" -f "$key_path" -q
-    fi
-  done
+generate_ssh_key() {
+  local key_path="$HOME/.ssh/id_ed25519"
+  if [ ! -f "$key_path" ]; then
+    ssh-keygen -t ed25519 -N "" -f "$key_path" -q
+  fi
 }
 
 create_azure_resources() {
@@ -155,7 +143,6 @@ create_service_principal() {
   clientSecret=$(echo "$sp_output" | jq -r .clientSecret)
   subscriptionId=$(echo "$sp_output" | jq -r .subscriptionId)
   AZURE_CREDENTIALS=$(echo "$sp_output" | jq -c '{clientId, clientSecret, subscriptionId, tenantId, resourceManagerEndpointUrl}')
-  echo $AZURE_CREDENTIALS
 
   if [[ -z "$clientId" || "$clientId" == "null" ]]; then
     echo "Error: Failed to retrieve or create the service principal. Exiting."
@@ -174,33 +161,58 @@ create_service_principal() {
   fi
 }
 
+update_HTPASSWD() {
+    # Check if the secret HTPASSWD exists
+    if gh secret list | grep -q '^HTPASSWD\s'; then
+        echo "The GitHub secret 'HTPASSWD' already exists."
+        read -p "Do you wish to change it? (Y/N): " response
+        if [[ "$response" =~ ^[Yy]$ ]]; then
+            read -sp "Enter new value for HTPASSWD: " new_htpasswd_value
+            echo
+            gh secret set HTPASSWD -b"$new_htpasswd_value"
+        fi
+    else
+        read -sp "Enter value for HTPASSWD: " new_htpasswd_value
+        echo
+        gh secret set HTPASSWD -b "$new_htpasswd_value"
+    fi
+}
+
 # Function to create GitHub secrets
 create_github_secrets() {
   local secret_key
+  secret_key=$(cat $HOME/.ssh/id_ed25519)
 
-  gh secret set AZURE_STORAGE_ACCOUNT_NAME -b "${PROJECT_NAME}account"
-  gh secret set TFSTATE_CONTAINER_NAME -b "${PROJECT_NAME}tfstate"
-  gh secret set AZURE_RESOURCE_GROUP_NAME -b "${PROJECT_NAME}-tfstate-RG"
-  gh secret set ARM_SUBSCRIPTION_ID -b "${subscriptionId}"
-  gh secret set ARM_TENANT_ID -b "${tenantId}"
-  gh secret set ARM_CLIENT_ID -b "${clientId}"
-  gh secret set ARM_CLIENT_SECRET -b "${clientSecret}"
-  gh secret set AZURE_CREDENTIALS -b "${AZURE_CREDENTIALS}"
-  gh secret set ACR_REGISTRY -b "${PROJECT_NAME}.azurecr.io"
-  gh secret set PROJECTNAME -b "${PROJECT_NAME}"
-  gh secret set LOCATION -b "${LOCATION}"
-  gh secret set PAT -b "$PAT"
-  gh variable set DEPLOYED -b "$DEPLOYED"
+  for secret in \
+    "AZURE_STORAGE_ACCOUNT_NAME:${PROJECT_NAME}account" \
+    "TFSTATE_CONTAINER_NAME:${PROJECT_NAME}tfstate" \
+    "AZURE_RESOURCE_GROUP_NAME:${PROJECT_NAME}-tfstate-RG" \
+    "ARM_SUBSCRIPTION_ID:${subscriptionId}" \
+    "ARM_TENANT_ID:${tenantId}" \
+    "ARM_CLIENT_ID:${clientId}" \
+    "ARM_CLIENT_SECRET:${clientSecret}" \
+    "AZURE_CREDENTIALS:${AZURE_CREDENTIALS}" \
+    "ACR_REGISTRY:${PROJECT_NAME}.azurecr.io" \
+    "PROJECTNAME:${PROJECT_NAME}" \
+    "LOCATION:${LOCATION}" \
+    "PAT:$PAT" \
+    "SSH_PRIVATE_KEY:${secret_key}" \
+    "DEPLOYED:$DEPLOYED"; do
+    key="${secret%%:*}"
+    value="${secret#*:}"
+    gh secret set "$key" -b "$value" || {
+      echo "Error: Failed to set GitHub secret $key. Exiting."
+      exit 1
+    }
+  done
 
   for repo in "${CONTENTREPOS[@]}"; do
-    gh secret set PAT -b "$PAT" --repo ${GITHUB_ORG}/$repo
+    gh secret set PAT -b "$PAT" --repo ${GITHUB_ORG}/$repo || {
+      echo "Error: Failed to set PAT secret for repository $repo. Exiting."
+      exit 1
+    }
   done
-  
-  for repo in "${CONTENTREPOS[@]}"; do
-    secret_key=$(cat $HOME/.ssh/id_ed25519-$repo)
-    gh secret set ${repo^^}_SSH_PRIVATE_KEY -b "$secret_key"
-  done
-  
+
 }
 
 # Function to handle deploy keys for repositories
@@ -213,7 +225,7 @@ handle_deploy_keys() {
     if [[ -n "$deploy_key_id" ]]; then
       gh repo deploy-key delete --repo ${GITHUB_ORG}/$repo "$deploy_key_id"
     fi
-    gh repo deploy-key add $HOME/.ssh/id_ed25519-${repo}.pub --title 'DEPLOY-KEY' --repo ${GITHUB_ORG}/$repo
+    gh repo deploy-key add $HOME/.ssh/id_ed25519.pub --title 'DEPLOY-KEY' --repo ${GITHUB_ORG}/$repo
   done
 }
 
@@ -224,8 +236,9 @@ prompt_for_PAT
 select_subscription
 create_azure_resources
 create_service_principal "$SUBSCRIPTION_ID"
-generate_ssh_keys
+generate_ssh_key
 check_and_create_repos
+update_HTPASSWD
 create_github_secrets
 handle_deploy_keys
 gh workflow run docs-builder

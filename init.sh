@@ -15,7 +15,9 @@ fi
 DEPLOYED=$(jq -r '.DEPLOYED' "$INITJSON")
 PROJECT_NAME=$(jq -r '.PROJECT_NAME' "$INITJSON")
 LOCATION=$(jq -r '.LOCATION' "$INITJSON")
+THEME_REPO_NAME=$(jq -r '.THEME_REPO_NAME' "$INITJSON")
 readarray -t CONTENTREPOS < <(jq -r '.REPOS[]' "$INITJSON")
+CONTENTREPOS+=("$THEME_REPO_NAME")
 
 # Check if variables were properly initialized
 if [[ -z "$DEPLOYED" || -z "$PROJECT_NAME" || -z "$LOCATION" || ${#CONTENTREPOS[@]} -eq 0 ]]; then
@@ -73,6 +75,46 @@ check_and_create_repos() {
   done
 }
 
+function clone_and_init_repo() {
+  # Use a trap to ensure that temporary directories are cleaned up safely
+  TEMP_DIR=$(mktemp -d)
+  trap 'rm -rf "$TEMP_DIR"' EXIT
+
+  local github_token="$PAT"
+  local file="dispatch.yml"
+
+  for repo in "${CONTENTREPOS[@]}"; do
+    # Create temporary folder for each repo
+    repo_temp_dir=$(mktemp -d -p "$TEMP_DIR")
+    cd "$repo_temp_dir" || exit 1
+
+    # Clone the private repository using the GITHUB_TOKEN
+    if ! git clone "https://$github_token@github.com/${GITHUB_ORG}/$repo"; then
+      echo "Error: Failed to clone repository $repo"
+      continue
+    fi
+
+    cd "$repo" || exit 1
+
+    # Ensure .github/workflows directory exists
+    mkdir -p .github/workflows
+
+    # Copy the dispatch.yml file into the .github/workflows directory
+    cp "../../$file" .github/workflows/dispatch.yml
+
+    # Check if there are changes to dispatch.yml
+    if ! git diff --quiet .github/workflows/dispatch.yml; then
+      # Stage the changes, commit, and push
+      git add .github/workflows/dispatch.yml
+      if git commit -m "Add or update dispatch.yml workflow"; then
+        git push origin main || echo "Warning: Failed to push changes to $repo"
+      else
+        echo "Warning: No changes to commit for $repo"
+      fi
+    fi
+  done
+}
+
 # Function to log in to Azure if not already logged in
 ensure_azure_login() {
   if ! az account show &>/dev/null; then
@@ -108,11 +150,13 @@ select_subscription() {
   fi
 }
 
-generate_ssh_key() {
-  local key_path="$HOME/.ssh/id_ed25519"
-  if [ ! -f "$key_path" ]; then
-    ssh-keygen -t ed25519 -N "" -f "$key_path" -q
-  fi
+generate_ssh_keys() {
+  for repo in "${CONTENTREPOS[@]}"; do
+    local key_path="$HOME/.ssh/id_ed25519-$repo"
+    if [ ! -f "$key_path" ]; then
+      ssh-keygen -t ed25519 -N "" -f "$key_path" -q
+    fi
+  done
 }
 
 create_azure_resources() {
@@ -196,12 +240,11 @@ create_github_secrets() {
     "PROJECTNAME:${PROJECT_NAME}" \
     "LOCATION:${LOCATION}" \
     "PAT:$PAT" \
-    "SSH_PRIVATE_KEY:${secret_key}" \
     "DEPLOYED:$DEPLOYED"; do
     key="${secret%%:*}"
     value="${secret#*:}"
     gh secret set "$key" -b "$value" || {
-      echo "Error: Failed to set GitHub secret $key. Exiting."
+      echo "Error: Failed to set GitHub secret $key/$value. Exiting."
       exit 1
     }
   done
@@ -209,6 +252,20 @@ create_github_secrets() {
   for repo in "${CONTENTREPOS[@]}"; do
     gh secret set PAT -b "$PAT" --repo ${GITHUB_ORG}/$repo || {
       echo "Error: Failed to set PAT secret for repository $repo. Exiting."
+      exit 1
+    }
+  done
+  for repo in "${CONTENTREPOS[@]}"; do
+    gh secret set CONTROL_REPO -b "${GITHUB_ORG}/${CONTROL_REPO}" --repo ${GITHUB_ORG}/$repo || {
+      echo "Error: Failed to set CONTROL_REPO secret for repository $repo. Exiting."
+      exit 1
+    }
+  done
+  for repo in "${CONTENTREPOS[@]}"; do
+    secret_key=$(cat $HOME/.ssh/id_ed25519-$repo)
+    normalized_repo=$(echo "$repo" | tr '-' '_' | tr '[:lower:]' '[:upper:]')
+    gh secret set ${normalized_repo}_SSH_PRIVATE_KEY -b "$secret_key" || {
+      echo "Error: Failed to set SSH private key secret for repository $repo. Exiting."
       exit 1
     }
   done
@@ -225,7 +282,7 @@ handle_deploy_keys() {
     if [[ -n "$deploy_key_id" ]]; then
       gh repo deploy-key delete --repo ${GITHUB_ORG}/$repo "$deploy_key_id"
     fi
-    gh repo deploy-key add $HOME/.ssh/id_ed25519.pub --title 'DEPLOY-KEY' --repo ${GITHUB_ORG}/$repo
+    gh repo deploy-key add $HOME/.ssh/id_ed25519-${repo}.pub --title 'DEPLOY-KEY' --repo ${GITHUB_ORG}/$repo
   done
 }
 
@@ -236,9 +293,10 @@ prompt_for_PAT
 select_subscription
 create_azure_resources
 create_service_principal "$SUBSCRIPTION_ID"
-generate_ssh_key
+generate_ssh_keys
 check_and_create_repos
 update_HTPASSWD
 create_github_secrets
+clone_and_init_repo
 handle_deploy_keys
 gh workflow run docs-builder

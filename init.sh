@@ -82,8 +82,18 @@ function clone_and_init_repo() {
 
   local github_token="$PAT"
   local file="dispatch.yml"
+  local current_dir=$(pwd)
+
+  # Check if dispatch.yml file exists before proceeding
+  if [[ ! -f "$file" ]]; then
+    echo "Error: File $file not found. Please ensure it is present in the current directory."
+    exit 1
+  fi
 
   for repo in "${CONTENTREPOS[@]}"; do
+    # Return to the original working directory at the start of each loop iteration
+    cd "$current_dir" || exit 1
+
     # Create temporary folder for each repo
     repo_temp_dir=$(mktemp -d -p "$TEMP_DIR")
     cd "$repo_temp_dir" || exit 1
@@ -100,7 +110,7 @@ function clone_and_init_repo() {
     mkdir -p .github/workflows
 
     # Copy the dispatch.yml file into the .github/workflows directory
-    cp "../../$file" .github/workflows/dispatch.yml
+    cp "$current_dir/$file" .github/workflows/dispatch.yml
 
     # Check if there are changes to dispatch.yml
     if ! git diff --quiet .github/workflows/dispatch.yml; then

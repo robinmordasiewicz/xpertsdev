@@ -208,7 +208,7 @@ jobs:
               exit 1
             fi
         
-            mkdir -p "$src_dir" && git clone "git@github.com:${{ github.repository_owner }}/$repo.git" "src/$repo/docs"
+            mkdir -p "src/$repo" && git clone "git@github.com:${{ github.repository_owner }}/$repo.git" "src/$repo/docs"
           done
 
       - name: Build Docs

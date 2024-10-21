@@ -191,7 +191,7 @@ jobs:
       - name: Clone hands-on labs
         shell: bash
         env:
-          SECRET_NAME: "DELETEME_SSH_PRIVATE_KEY"
+          SECRET_NAME: "DELETEMEREPO_SSH_PRIVATE_KEY"
         run: |
           # Load and parse config.json
           repos=$(jq -r '.REPOS[]' config.json)

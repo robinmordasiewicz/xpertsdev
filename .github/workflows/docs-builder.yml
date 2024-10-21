@@ -198,15 +198,9 @@ jobs:
           for repo in $repos; do
             # Normalize the repository name to uppercase and replace dashes with underscores
             normalized_repo=$(echo "$repo" | tr '[:lower:]-' '[:upper:]_')
-              
-            # Construct the SSH private key variable name and the source directory path
             ssh_key_variable_name="${normalized_repo}_SSH_PRIVATE_KEY"
-            src_dir="src/$repo/docs"
-              
-            # Extract the SSH private key from GitHub secrets and clone the repository
-            ssh_key_value=$(eval echo "\${{ secrets.$ssh_key_variable_name }}")
-            chmod 600 ~/.ssh/id_ed25519 && echo "$ssh_key_value" > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
-            mkdir -p "$src_dir" && git clone "git@github.com:${{ github.repository_owner }}/$repo.git" "$src_dir"
+            chmod 600 ~/.ssh/id_ed25519 && echo "${{ secrets[ssh_key_variable_name] }}" > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
+            mkdir -p "$src_dir" && git clone "git@github.com:${{ github.repository_owner }}/$repo.git" "src/$repo/docs"
           done
 
       - name: Build Docs

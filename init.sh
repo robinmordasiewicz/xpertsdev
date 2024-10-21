@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # Initialize INITJSON variable
-INITJSON="init.json"
+INITJSON="config.json"
 
 # Ensure the init.json file exists
 if [[ ! -f "$INITJSON" ]]; then
@@ -18,6 +18,8 @@ LOCATION=$(jq -r '.LOCATION' "$INITJSON")
 THEME_REPO_NAME=$(jq -r '.THEME_REPO_NAME' "$INITJSON")
 readarray -t CONTENTREPOS < <(jq -r '.REPOS[]' "$INITJSON")
 CONTENTREPOS+=("$THEME_REPO_NAME")
+
+current_dir=$(pwd)
 
 # Check if variables were properly initialized
 if [[ -z "$DEPLOYED" || -z "$PROJECT_NAME" || -z "$LOCATION" || ${#CONTENTREPOS[@]} -eq 0 ]]; then
@@ -82,7 +84,6 @@ function clone_and_init_repo() {
 
   local github_token="$PAT"
   local file="dispatch.yml"
-  local current_dir=$(pwd)
 
   # Check if dispatch.yml file exists before proceeding
   if [[ ! -f "$file" ]]; then
@@ -136,7 +137,7 @@ ensure_azure_login() {
 
 # Function to select Azure subscription
 select_subscription() {
-  local current_sub_name current_sub_id confirm subscription_name subscription_id
+  local current_sub_name current_sub_id confirm subscription_name
 
   current_sub_name=$(az account show --query "name" --output tsv 2>/dev/null)
   current_sub_id=$(az account show --query "id" --output tsv 2>/dev/null)
@@ -209,7 +210,7 @@ create_service_principal() {
   # Check if role assignment already exists
   role_exists=$(az role assignment list --assignee "$clientId" --role "User Access Administrator" --scope "/subscriptions/$1" --query '[].id' -o tsv)
 
-  if [[ ! -n "$role_exists" ]]; then
+  if [[ -z "$role_exists" ]]; then
     # Create role assignment if it doesn't exist
     az role assignment create --assignee "$clientId" --role "User Access Administrator" --scope "/subscriptions/$1" || {
       echo "Failed to assign the role. Exiting."
@@ -222,15 +223,15 @@ update_HTPASSWD() {
     # Check if the secret HTPASSWD exists
     if gh secret list | grep -q '^HTPASSWD\s'; then
         echo "The GitHub secret 'HTPASSWD' already exists."
-        read -p "Do you wish to change it? (N/y): " response
+        read -rp "Do you wish to change it? (N/y): " response
         response=${response:-N}
         if [[ "$response" =~ ^[Yy]$ ]]; then
-            read -sp "Enter new value for HTPASSWD: " new_htpasswd_value
+            read -srp "Enter new value for HTPASSWD: " new_htpasswd_value
             echo
             gh secret set HTPASSWD -b"$new_htpasswd_value"
         fi
     else
-        read -sp "Enter value for HTPASSWD: " new_htpasswd_value
+        read -srp "Enter value for HTPASSWD: " new_htpasswd_value
         echo
         gh secret set HTPASSWD -b "$new_htpasswd_value"
     fi
@@ -311,6 +312,6 @@ generate_ssh_keys
 check_and_create_repos
 update_HTPASSWD
 create_github_secrets
-handle_deploy_keys
 clone_and_init_repo
+handle_deploy_keys
 gh workflow run docs-builder

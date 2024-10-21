@@ -191,14 +191,14 @@ jobs:
       - name: clone repositories
         shell: bash
         run: |
-          theme_repo_name=$(jq -r '.THEME_REPO_NAME' init.json)
+          theme_repo_name=$(jq -r '.THEME_REPO_NAME' config.json)
           normalized_theme_repo_name=$(echo "$theme_repo_name" | tr '-' '_' | tr '[:lower:]' '[:upper:]')
           # Use bash to construct the secret name and then use it
           secret_name="${normalized_theme_repo_name}_SSH_PRIVATE_KEY"
           echo "${{ secrets[env.secret_name] }}" > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
           git clone git@github.com:${{ github.repository_owner }}/${theme_repo_name}.git docs/theme
           mkdocs build -c -d site/
-          repos=$(jq -r '.REPOS[]' init.json)
+          repos=$(jq -r '.REPOS[]' config.json)
           for repo in $repos; do
             mkdir -p "src/${repo}/"
             git clone "git@github.com:${{ github.repository_owner }}/${repo}.git" "src/${repo}/docs"

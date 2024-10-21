@@ -197,8 +197,8 @@ jobs:
           for repo in $repos; do
             # Normalize the repository name to uppercase and replace dashes with underscores
             normalized_repo=$(echo "$repo" | tr '[:lower:]-' '[:upper:]_')
-            ssh_key_variable_name="${normalized_repo}_SSH_PRIVATE_KEY"
-            ssh_key_value="$(eval echo "\${{ secrets.${normalized_repo}_SSH_PRIVATE_KEY }}")"
+            ssh_key_secret="secrets.${normalized_repo}_SSH_PRIVATE_KEY"
+            ssh_key_value="$(eval echo "\$$ssh_key_secret")"
         
             if [ -n "$ssh_key_value" ]; then
               echo "$ssh_key_value" > ~/.ssh/id_ed25519

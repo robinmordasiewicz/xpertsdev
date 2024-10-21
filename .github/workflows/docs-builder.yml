@@ -197,10 +197,12 @@ jobs:
       - name: Clone hands-on labs
         shell: bash
         env:
-          SECRET_NAME: "DELETEMEREPO_SSH_PRIVATE_KEY"
+          REPOS: ${{ env.REPOS }}
         run: |
-          for repo in ${{ env.REPOS }}; do
-            echo '${{ secrets[repo] }}' > ~/.ssh/id_ed25519
+          for repo in $repos; do
+            secret_name="${repo}_SSH_PRIVATE_KEY"
+            secret_value="${{ secrets[secret_name] }}"
+            echo "$secret_value" > ~/.ssh/id_ed25519
             chmod 400 ~/.ssh/id_ed25519
             cat ~/.ssh/id_ed25519
             mkdir -p "src/$repo" && git clone "git@github.com:${{ github.repository_owner }}/$repo.git" "src/$repo/docs"

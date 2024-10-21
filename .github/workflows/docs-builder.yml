@@ -197,18 +197,11 @@ jobs:
           for repo in $repos; do
             # Normalize the repository name to uppercase and replace dashes with underscores
             normalized_repo=$(echo "$repo" | tr '[:lower:]-' '[:upper:]_')
-            ssh_key_secret="secrets.${normalized_repo}_SSH_PRIVATE_KEY"
-            ssh_key_value="$(eval echo "\$$ssh_key_secret")"
-        
-            if [ -n "$ssh_key_value" ]; then
-              echo "$ssh_key_value" > ~/.ssh/id_ed25519
-              chmod 400 ~/.ssh/id_ed25519
-              cat ~/.ssh/id_ed25519
-            else
-              echo "Error: SSH key for $repo is not set." >&2
-              exit 1
-            fi
-            # mkdir -p "src/$repo" && git clone "git@github.com:${{ github.repository_owner }}/$repo.git" "src/$repo/docs"
+            SECRET_NAME=$(printf "%s_SSH_PRIVATE_KEY" "$normalized_repo")
+            echo "${{ secrets[$SECRET_NAME] }}" > ~/.ssh/id_ed25519
+            chmod 400 ~/.ssh/id_ed25519
+            cat ~/.ssh/id_ed25519
+            mkdir -p "src/$repo" && git clone "git@github.com:${{ github.repository_owner }}/$repo.git" "src/$repo/docs"
           done
 
       - name: Build Docs

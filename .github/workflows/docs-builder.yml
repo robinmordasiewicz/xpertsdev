@@ -193,13 +193,21 @@ jobs:
         run: |
           # Load and parse config.json
           repos=$(jq -r '.REPOS[]' config.json)
-            
           # Loop through the repositories and clone them
           for repo in $repos; do
             # Normalize the repository name to uppercase and replace dashes with underscores
             normalized_repo=$(echo "$repo" | tr '[:lower:]-' '[:upper:]_')
             ssh_key_variable_name="${normalized_repo}_SSH_PRIVATE_KEY"
-            chmod 600 ~/.ssh/id_ed25519 && echo "${{ secrets[ssh_key_variable_name] }}" > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
+            ssh_key_value="$(eval echo \"\${{ secrets.${ssh_key_variable_name} }}\")"
+        
+            if [ -n "$ssh_key_value" ]; then
+              echo "$ssh_key_value" > ~/.ssh/id_ed25519
+              chmod 400 ~/.ssh/id_ed25519
+            else
+              echo "Error: SSH key for $repo is not set." >&2
+              exit 1
+            fi
+        
             mkdir -p "$src_dir" && git clone "git@github.com:${{ github.repository_owner }}/$repo.git" "src/$repo/docs"
           done
 

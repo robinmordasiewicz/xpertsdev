@@ -193,19 +193,21 @@ jobs:
         run: |
           REPOS=$(jq -r '.REPOS[] | ascii_upcase' config.json | jq -s -c .)
           echo "REPOS=$REPOS" >> $GITHUB_ENV
-
-      - name: Clone hands-on labs
+  
+      - name: Process Repositories and Clone
         shell: bash
-        env:
-          REPOS: ${{ env.REPOS }}
         run: |
-          for repo in $repos; do
-            secret_name="${repo}_SSH_PRIVATE_KEY"
-            secret_value="${{ secrets[secret_name] }}"
-            echo "$secret_value" > ~/.ssh/id_ed25519
-            chmod 400 ~/.ssh/id_ed25519
-            cat ~/.ssh/id_ed25519
-            mkdir -p "src/$repo" && git clone "git@github.com:${{ github.repository_owner }}/$repo.git" "src/$repo/docs"
+          REPOS_ARRAY=($(echo "${{ env.REPOS }}" | jq -r '.[]'))
+          for REPO in "${REPOS_ARRAY[@]}"; do
+            # Set the secret name for this iteration
+            SECRET_NAME="${REPO}_SSH_PRIVATE_KEY"
+            # Export the secret as an environment variable for this step
+            export SECRET_VALUE="${{ secrets[env.SECRET_NAME] }}"
+            echo "Processing repository: $REPO"
+            # Here you can use $SECRET_VALUE, but since we're in bash, we directly use the exported variable
+            mkdir -p "src/$REPO"
+            # Example git clone, note: ensure the SSH key setup is correct outside this script
+            git clone "git@github.com:${{ github.repository_owner }}/${REPO,,}.git" "src/$REPO/docs"
           done
 
       - name: Build Docs

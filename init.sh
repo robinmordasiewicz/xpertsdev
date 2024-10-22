@@ -328,6 +328,7 @@ generate_github_action() {
   # Properly format and replace the placeholder with the generated clone commands
   echo -e "$clone_commands" | sed -e "/%%INSERTCLONEREPO%%/r /dev/stdin" -e "/%%INSERTCLONEREPO%%/d" "$tpl_file" | awk 'BEGIN { blank=0 } { if (/^$/) { blank++; if (blank <= 1) print; } else { blank=0; print; } }' > "$output_file"
   git add $output_file && git commit -m "updating docs-builder" && git switch -C docs-builder main && git push && gh pr create --title "Initializing repo" --body "Update docs builder" && gh pr merge -m --delete-branch
+  echo ""
 }
 
 check_git_status() {
@@ -350,12 +351,25 @@ check_git_status() {
     elif [ "$LOCAL_HASH" = "$BASE_HASH" ]; then
         echo "Error: Local repository is behind the remote. Please pull the latest changes." >&2
         return 1
-    elif [ "$REMOTE_HASH" = "$BASE_HASH" ]; then
-        echo "Local repository has unpushed commits."
     else
-        echo "Local and remote repositories have diverged." >&2
-        return 1
+        echo "Local repository is ahead of or diverged from the remote, but this is acceptable."
     fi
+}
+
+check_and_commit_config() {
+  # Check if config.json has uncommitted changes
+  if git status --porcelain | grep -q "config.json"; then
+    echo "config.json has uncommitted changes. Proceeding with commit."
+    # Stage config.json, commit, switch to a new branch, and push
+    git add config.json && \
+    git commit -m "updating docs-builder" && \
+    git switch -C config main && \
+    git push && \
+    # Create a pull request using GitHub CLI
+    gh pr create --title "Updating config" --body "Update config" && \
+    # Merge the PR and delete the branch
+    gh pr merge -m --delete-branch
+  fi
 }
 
 # Main execution flow
@@ -372,5 +386,6 @@ update_HTPASSWD
 create_github_secrets
 clone_and_init_repo
 handle_deploy_keys
+check_and_commit_config
 generate_github_action
 gh workflow run docs-builder

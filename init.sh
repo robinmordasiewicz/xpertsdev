@@ -366,7 +366,8 @@ generate_github_action() {
     clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${repo}.git src/${repo}/docs\n"
     clone_commands+="          cp -a docs/theme src/${repo}/docs/\n"
     clone_commands+="          echo 'INHERIT: docs/theme/mkdocs.yml' > /home/runner/work/.github/.github/src/${repo}/mkdocs.yml\n"
-    clone_commands+="          cd /home/runner/work/.github/.github/src/${repo} && mkdocs build -d /home/runner/work/.github/.github/build/${repo} && mv /home/runner/work/.github/.github/build/${repo} /home/runner/work/.github/.github/site/\n"
+    clone_commands+="          echo ${{ github.workspace }}\n"
+    clone_commands+="          #cd /home/runner/work/.github/.github/src/${repo} && mkdocs build -d /home/runner/work/.github/.github/build/${repo} && mv /home/runner/work/.github/.github/build/${repo} /home/runner/work/.github/.github/site/\n"
   done
 
   # Properly format and replace the placeholder with the generated clone commands

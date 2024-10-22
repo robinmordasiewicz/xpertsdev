@@ -202,7 +202,7 @@ jobs:
           mkdocs build -c -d site/
           if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi
           echo '${{ secrets.DELETEMEREPO_SSH_PRIVATE_KEY }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
-          mkdir -p src/deletemerepo/docs
+          mkdir -p src/deletemerepo
           git clone git@github.com:${{ github.repository_owner }}/deletemerepo.git src/deletemerepo/docs
           cp -a docs/theme src/deletemerepo/docs/
           echo 'INHERIT: docs/theme/mkdocs.yml' > ${{ github.workspace }}/src/deletemerepo/mkdocs.yml

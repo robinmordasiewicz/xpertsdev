@@ -242,7 +242,7 @@ update_HTPASSWD() {
 create_github_secrets() {
   local secret_key
   local max_retries=3
-  local retry_interval=10
+  local retry_interval=5
   secret_key=$(cat $HOME/.ssh/id_ed25519)
 
   for secret in \

@@ -242,7 +242,7 @@ update_HTPASSWD() {
 create_github_secrets() {
   local secret_key
   local max_retries=3
-  local retry_interval=30
+  local retry_interval=10
   secret_key=$(cat $HOME/.ssh/id_ed25519)
 
   for secret in \
@@ -279,18 +279,45 @@ create_github_secrets() {
   for repo in "${CONTENTREPOS[@]}"; do
     secret_key=$(cat $HOME/.ssh/id_ed25519-$repo)
     normalized_repo=$(echo "$repo" | tr '-' '_' | tr '[:lower:]' '[:upper:]')
-    gh secret set ${normalized_repo}_SSH_PRIVATE_KEY -b "$secret_key" || {
-      echo "Error: Failed to set SSH private key secret for repository $repo. Exiting."
-      exit 1
-    }
-    gh secret set PAT -b "$PAT" --repo ${GITHUB_ORG}/$repo || {
-      echo "Error: Failed to set PAT secret for repository $repo. Exiting."
-      exit 1
-    }
-    gh secret set CONTROL_REPO -b "${GITHUB_ORG}/${CONTROL_REPO}" --repo ${GITHUB_ORG}/$repo || {
-      echo "Error: Failed to set CONTROL_REPO secret for repository $repo. Exiting."
-      exit 1
-    }
+    for ((attempt=1; attempt<=max_retries; attempt++)); do
+      if gh secret set ${normalized_repo}_SSH_PRIVATE_KEY -b "$secret_key"; then
+        break
+      else
+        if [[ $attempt -lt $max_retries ]]; then
+          echo "Warning: Failed to set GitHub secret ${normalized_repo}_SSH_PRIVATE_KEY. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
+          sleep $retry_interval
+        else
+          echo "Error: Failed to set GitHub secret ${normalized_repo}_SSH_PRIVATE_KEY after $max_retries attempts. Exiting."
+          exit 1
+        fi
+      fi
+    done
+    for ((attempt=1; attempt<=max_retries; attempt++)); do
+      if gh secret set PAT -b "$PAT" --repo ${GITHUB_ORG}/$repo ; then
+        break
+      else
+        if [[ $attempt -lt $max_retries ]]; then
+          echo "Warning: Failed to set GitHub secret PAT. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
+          sleep $retry_interval
+        else
+          echo "Error: Failed to set GitHub secret PAT after $max_retries attempts. Exiting."
+          exit 1
+        fi
+      fi
+    done
+    for ((attempt=1; attempt<=max_retries; attempt++)); do
+      if gh secret set CONTROL_REPO -b "${GITHUB_ORG}/${CONTROL_REPO}" --repo ${GITHUB_ORG}/$repo ; then
+        break
+      else
+        if [[ $attempt -lt $max_retries ]]; then
+          echo "Warning: Failed to set GitHub secret CONTROL_REPO. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
+          sleep $retry_interval
+        else
+          echo "Error: Failed to set GitHub secret CONTROL_REPO after $max_retries attempts. Exiting."
+          exit 1
+        fi
+      fi
+    done
   done
 }
 

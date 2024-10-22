@@ -301,6 +301,30 @@ handle_deploy_keys() {
   done
 }
 
+generate_github_action() {
+  local tpl_file="docs-builder.tpl"
+  local output_file=".github/workflows/docs-builder.yml"
+  mkdir -p "$(dirname "$output_file")"
+
+  # Start building the clone repo commands string
+  local clone_commands=""
+  clone_commands+="      - name: Clone Content\n"
+  clone_commands+="        shell: bash\n"
+  clone_commands+="        run: |\n"
+
+  # Loop through each repository and append commands
+  for repo in "${CONTENTREPOS[@]}"; do
+    local secret_key_name="$(echo "$repo" | tr '[:lower:]-' '[:upper:]_')_SSH_PRIVATE_KEY"
+    clone_commands+="          if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi\n"
+    clone_commands+="          echo '\${{ secrets.${secret_key_name} }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519\n"
+    clone_commands+="          mkdir -p src/${repo}/docs\n"
+    clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${repo}.git src/${repo}/docs\n"
+  done
+
+  # Properly format and replace the placeholder with the generated clone commands
+  echo -e "$clone_commands" | sed -e "/%%INSERTCLONEREPO%%/r /dev/stdin" -e "/%%INSERTCLONEREPO%%/d" "$tpl_file" | awk 'BEGIN { blank=0 } { if (/^$/) { blank++; if (blank <= 1) print; } else { blank=0; print; } }' > "$output_file"
+}
+
 # Main execution flow
 ensure_azure_login
 ensure_github_login
@@ -314,4 +338,5 @@ update_HTPASSWD
 create_github_secrets
 clone_and_init_repo
 handle_deploy_keys
+generate_github_action &&
 gh workflow run docs-builder

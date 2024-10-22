@@ -241,6 +241,8 @@ update_HTPASSWD() {
 # Function to create GitHub secrets
 create_github_secrets() {
   local secret_key
+  local max_retries=3
+  local retry_interval=30
   secret_key=$(cat $HOME/.ssh/id_ed25519)
 
   for secret in \
@@ -259,11 +261,19 @@ create_github_secrets() {
     "DEPLOYED:$DEPLOYED"; do
     key="${secret%%:*}"
     value="${secret#*:}"
-    gh secret set "$key" -b "$value" || {
-      echo "Error: Failed to set GitHub secret $key/$value. Exiting."
-      exit 1
-    }
-    sleep 10
+    for ((attempt=1; attempt<=max_retries; attempt++)); do
+      if gh secret set "$key" -b "$value"; then
+        break
+      else
+        if [[ $attempt -lt $max_retries ]]; then
+          echo "Warning: Failed to set GitHub secret $key. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
+          sleep $retry_interval
+        else
+          echo "Error: Failed to set GitHub secret $key after $max_retries attempts. Exiting."
+          exit 1
+        fi
+      fi
+    done
   done
 
   for repo in "${CONTENTREPOS[@]}"; do
@@ -273,17 +283,14 @@ create_github_secrets() {
       echo "Error: Failed to set SSH private key secret for repository $repo. Exiting."
       exit 1
     }
-    sleep 10
     gh secret set PAT -b "$PAT" --repo ${GITHUB_ORG}/$repo || {
       echo "Error: Failed to set PAT secret for repository $repo. Exiting."
       exit 1
     }
-    sleep 10
     gh secret set CONTROL_REPO -b "${GITHUB_ORG}/${CONTROL_REPO}" --repo ${GITHUB_ORG}/$repo || {
       echo "Error: Failed to set CONTROL_REPO secret for repository $repo. Exiting."
       exit 1
     }
-    sleep 10
   done
 }
 
@@ -295,9 +302,9 @@ handle_deploy_keys() {
 
     # Check if the deploy key exists and delete it if necessary
     if [[ -n "$deploy_key_id" ]]; then
-      gh repo deploy-key delete --repo ${GITHUB_ORG}/$repo "$deploy_key_id" && sleep 10
+      gh repo deploy-key delete --repo ${GITHUB_ORG}/$repo "$deploy_key_id"
     fi
-    gh repo deploy-key add $HOME/.ssh/id_ed25519-${repo}.pub --title 'DEPLOY-KEY' --repo ${GITHUB_ORG}/$repo && sleep 10
+    gh repo deploy-key add $HOME/.ssh/id_ed25519-${repo}.pub --title 'DEPLOY-KEY' --repo ${GITHUB_ORG}/$repo
   done
 }
 

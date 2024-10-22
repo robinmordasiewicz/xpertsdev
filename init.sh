@@ -228,12 +228,12 @@ update_HTPASSWD() {
         if [[ "$response" =~ ^[Yy]$ ]]; then
             read -srp "Enter new value for HTPASSWD: " new_htpasswd_value
             echo
-            gh secret set HTPASSWD -b"$new_htpasswd_value"
+            gh secret set HTPASSWD -b"$new_htpasswd_value" && sleep 10
         fi
     else
         read -srp "Enter value for HTPASSWD: " new_htpasswd_value
         echo
-        gh secret set HTPASSWD -b "$new_htpasswd_value"
+        gh secret set HTPASSWD -b "$new_htpasswd_value" && sleep 10
     fi
 }
 
@@ -262,6 +262,7 @@ create_github_secrets() {
       echo "Error: Failed to set GitHub secret $key/$value. Exiting."
       exit 1
     }
+    sleep 10
   done
 
   for repo in "${CONTENTREPOS[@]}"; do
@@ -269,12 +270,14 @@ create_github_secrets() {
       echo "Error: Failed to set PAT secret for repository $repo. Exiting."
       exit 1
     }
+    sleep 10
   done
   for repo in "${CONTENTREPOS[@]}"; do
     gh secret set CONTROL_REPO -b "${GITHUB_ORG}/${CONTROL_REPO}" --repo ${GITHUB_ORG}/$repo || {
       echo "Error: Failed to set CONTROL_REPO secret for repository $repo. Exiting."
       exit 1
     }
+    sleep 10
   done
   for repo in "${CONTENTREPOS[@]}"; do
     secret_key=$(cat $HOME/.ssh/id_ed25519-$repo)
@@ -283,6 +286,7 @@ create_github_secrets() {
       echo "Error: Failed to set SSH private key secret for repository $repo. Exiting."
       exit 1
     }
+    sleep 10
   done
 
 }
@@ -295,9 +299,9 @@ handle_deploy_keys() {
 
     # Check if the deploy key exists and delete it if necessary
     if [[ -n "$deploy_key_id" ]]; then
-      gh repo deploy-key delete --repo ${GITHUB_ORG}/$repo "$deploy_key_id"
+      gh repo deploy-key delete --repo ${GITHUB_ORG}/$repo "$deploy_key_id" && sleep 10
     fi
-    gh repo deploy-key add $HOME/.ssh/id_ed25519-${repo}.pub --title 'DEPLOY-KEY' --repo ${GITHUB_ORG}/$repo
+    gh repo deploy-key add $HOME/.ssh/id_ed25519-${repo}.pub --title 'DEPLOY-KEY' --repo ${GITHUB_ORG}/$repo && sleep 10
   done
 }
 
@@ -326,7 +330,36 @@ generate_github_action() {
   git add $output_file && git commit -m "updating docs-builder" && git switch -C docs-builder main && git push && gh pr create --title "Initializing repo" --body "Update docs builder" && gh pr merge -m --delete-branch
 }
 
+check_git_status() {
+    # Check if the current directory is a Git repository
+    if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+        echo "Error: This script must be run from within a Git repository." >&2
+        return 1
+    fi
+
+    # Fetch the latest changes from the remote repository
+    git fetch &>/dev/null
+
+    # Check if the local branch is up to date with the remote branch
+    LOCAL_HASH=$(git rev-parse @)
+    REMOTE_HASH=$(git rev-parse @{u})
+    BASE_HASH=$(git merge-base @ @{u})
+
+    if [ "$LOCAL_HASH" = "$REMOTE_HASH" ]; then
+        echo "Local repository is up to date with the remote."
+    elif [ "$LOCAL_HASH" = "$BASE_HASH" ]; then
+        echo "Error: Local repository is behind the remote. Please pull the latest changes." >&2
+        return 1
+    elif [ "$REMOTE_HASH" = "$BASE_HASH" ]; then
+        echo "Local repository has unpushed commits."
+    else
+        echo "Local and remote repositories have diverged." >&2
+        return 1
+    fi
+}
+
 # Main execution flow
+check_git_status
 ensure_azure_login
 ensure_github_login
 prompt_for_PAT

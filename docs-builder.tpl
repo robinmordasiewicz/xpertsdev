@@ -190,19 +190,6 @@ jobs:
 
       %%INSERTCLONEREPO%%
 
-      - name: Build Docs
-        shell: bash
-        run: |
-          REPOS=$(jq -r '.REPOS[]' config.json)
-          mkdocs build -c -d site/
-          for repo in ${REPOS}; do
-            cp -a docs/theme src/${repo}/docs/
-            echo "---" > /home/runner/work/_temp/${repo}/mkdocs.yml
-            echo "INHERIT: docs/theme/mkdocs.yml" >> /home/runner/work/_temp/${repo}/mkdocs.yml
-            cd /home/runner/work/_temp/${repo} && mkdocs build -d /home/runner/work/_temp/build/${repo}
-            mv /home/runner/work/_temp/build/${repo} /home/runner/work/_temp/site/
-          done
-
       - name: Create htaccess password
         run: |
           htpasswd -b -c .htpasswd ${{ secrets.PROJECTNAME }} ${{ secrets.HTPASSWD }}

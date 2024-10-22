@@ -174,7 +174,7 @@ jobs:
       - name: Install mkdocs
         run: |
           pip install --upgrade pip
-          pip install material mkdocs-awesome-pages-plugin mkdocs-git-authors-plugin mkdocs-git-committers-plugin-2 mkdocs-git-revision-date-localized-plugin mkdocs-glightbox mkdocs-material[imaging] mkdocs-minify-plugin mkdocs-monorepo-plugin mkdocs-pdf-export-plugin mkdocs-same-dir mkdocstrings[crystal,python] mkdocs-with-pdf pymdown-extensions mkdocs-enumerate-headings-plugin mkdocs-exclude
+          pip install -U -r requirements.txt
 
       - name: setup ssh config
         shell: bash

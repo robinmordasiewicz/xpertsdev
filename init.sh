@@ -256,6 +256,7 @@ create_github_secrets() {
     "AZURE_CREDENTIALS:${AZURE_CREDENTIALS}" \
     "ACR_REGISTRY:${PROJECT_NAME}.azurecr.io" \
     "PROJECTNAME:${PROJECT_NAME}" \
+    "THEME_REPO_NAME:${THEME_REPO_NAME}" \
     "LOCATION:${LOCATION}" \
     "PAT:$PAT" \
     "DEPLOYED:$DEPLOYED"; do
@@ -354,6 +355,7 @@ generate_github_action() {
   clone_commands+="      - name: Clone Content\n"
   clone_commands+="        shell: bash\n"
   clone_commands+="        run: |\n"
+  clone_commands+="          mkdocs build -c -d site/\n"
 
   # Loop through each repository and append commands
   for repo in "${CONTENTREPOSONLY[@]}"; do
@@ -362,6 +364,9 @@ generate_github_action() {
     clone_commands+="          echo '\${{ secrets.${secret_key_name} }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519\n"
     clone_commands+="          mkdir -p src/${repo}/docs\n"
     clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${repo}.git src/${repo}/docs\n"
+    clone_commands+="          cp -a docs/theme src/${repo}/docs/\n"
+    clone_commands+="          echo 'INHERIT: docs/theme/mkdocs.yml' > /home/runner/work/.github/.github/src/${repo}/mkdocs.yml\n"
+    clone_commands+="          cd /home/runner/work/.github/.github/src/${repo} && mkdocs build -d /home/runner/work/.github/.github/build/${repo} && mv /home/runner/work/.github/.github/build/${repo} /home/runner/work/.github/.github/site/\n"
   done
 
   # Properly format and replace the placeholder with the generated clone commands

@@ -206,7 +206,7 @@ jobs:
           git clone git@github.com:${{ github.repository_owner }}/deletemerepo.git src/deletemerepo/docs
           cp -a docs/theme src/deletemerepo/docs/
           echo 'INHERIT: docs/theme/mkdocs.yml' > ${{ github.workspace }}/src/deletemerepo/mkdocs.yml
-          cd ${{ github.workspace }}/src/deletemerepo && pwd && ls -la
+          cd ${{ github.workspace }}/src/deletemerepo && mkdocs build -d ${{ github.workspace }}/build/deletemerepo && mv ${{ github.workspace }}/build/deletemerepo ${{ github.workspace }}/site/
 
       - name: Create htaccess password
         run: |

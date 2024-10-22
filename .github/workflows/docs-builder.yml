@@ -195,20 +195,17 @@ jobs:
           echo "REPOS=$REPOS" >> $GITHUB_ENV
         shell: bash
   
-      - name: Process Repositories and Clone
+      - name: Clone Content
         shell: bash
-        env:
-          REPOS: ${{ env.REPOS }}
         run: |
-          REPOS_ARRAY=(${{ env.REPOS }})
-          for REPO in "${REPOS_ARRAY[@]}"; do
-            # Set the secret name for this iteration
-            SECRET_NAME="${REPO}_SSH_PRIVATE_KEY"
-            # Export the secret as an environment variable for this step
-            SECRET_VALUE="${{ secrets[SECRET_NAME] }}"
-            mkdir -p "src/$REPO"
-            git clone "git@github.com:${{ github.repository_owner }}/${REPO}.git" "src/$REPO/docs"
-          done
+          if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi
+          echo '${{ secrets.DELETEMEREPO_SSH_PRIVATE_KEY }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
+          mkdir -p src/deletemerepo/docs
+          git clone git@github.com:${{ github.repository_owner }}/deletemerepo.git src/deletemerepo/docs
+          if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi
+          echo '${{ secrets.DOCS_THEME_SSH_PRIVATE_KEY }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
+          mkdir -p src/docs-theme/docs
+          git clone git@github.com:${{ github.repository_owner }}/docs-theme.git src/docs-theme/docs
 
       - name: Build Docs
         shell: bash

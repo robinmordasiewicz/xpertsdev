@@ -323,6 +323,7 @@ generate_github_action() {
 
   # Properly format and replace the placeholder with the generated clone commands
   echo -e "$clone_commands" | sed -e "/%%INSERTCLONEREPO%%/r /dev/stdin" -e "/%%INSERTCLONEREPO%%/d" "$tpl_file" | awk 'BEGIN { blank=0 } { if (/^$/) { blank++; if (blank <= 1) print; } else { blank=0; print; } }' > "$output_file"
+  git add $output_file && git commit -m "updating docs-builder" && git switch -C docs-builder main && git push && gh pr create --title "Initializing repo" --body "Update docs builder" && gh pr merge --squash --delete-branch --confirm
 }
 
 # Main execution flow
@@ -338,5 +339,5 @@ update_HTPASSWD
 create_github_secrets
 clone_and_init_repo
 handle_deploy_keys
-generate_github_action &&
+generate_github_action
 gh workflow run docs-builder

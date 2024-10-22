@@ -1,0 +1,8 @@
+---
+site_name: Americas International Xperts
+site_description: Fortinet Subject Matter Experts Conference
+# plugins:
+# - childpages-card-grid:
+#     include_all: True
+#     cards_title: 'Child pages'
+INHERIT: docs/theme/mkdocs.yml

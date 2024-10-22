@@ -214,8 +214,9 @@ jobs:
       - name: Build Docs
         shell: bash
         run: |
+          REPOS=$(jq -r '.REPOS[]' config.json)
           mkdocs build -c -d site/
-          for repo in ${{ env.REPOS }}; do
+          for repo in ${REPOS}; do
             cp -a docs/theme src/${repo}/docs/
             echo "---" > /home/runner/work/_temp/${repo}/mkdocs.yml
             echo "INHERIT: docs/theme/mkdocs.yml" >> /home/runner/work/_temp/${repo}/mkdocs.yml

@@ -2,7 +2,7 @@
 version: 2
 updates:
   - package-ecosystem: github-actions
-    directory: .github/workflows
+    directory: .docs-builder.tpl
     schedule:
       interval: daily
   - package-ecosystem: terraform

@@ -194,8 +194,8 @@ jobs:
           REPOS=$(jq -r '[.REPOS[] | ascii_upcase] | join(" ")' config.json)
           echo "REPOS=$REPOS" >> $GITHUB_ENV
         shell: bash
-  
-      %%INSERTCLONEREPO%%
+
+      %%INSERTCLONECONTENT%%
 
       - name: Build Docs
         shell: bash

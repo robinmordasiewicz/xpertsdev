@@ -188,13 +188,6 @@ jobs:
             StrictHostKeyChecking no
           EOF
 
-      - name: Read config.json and set REPOS as environment variable
-        id: set-repos-env
-        run: |
-          REPOS=$(jq -r '[.REPOS[] | ascii_upcase] | join(" ")' config.json)
-          echo "REPOS=$REPOS" >> $GITHUB_ENV
-        shell: bash
-
       - name: Clone Theme
         shell: bash
         run: |

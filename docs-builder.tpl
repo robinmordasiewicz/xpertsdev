@@ -195,7 +195,7 @@ jobs:
           echo "REPOS=$REPOS" >> $GITHUB_ENV
         shell: bash
 
-      %%INSERTCLONECONTENT%%
+      %%INSERTCLONEREPO%%
 
       - name: Build Docs
         shell: bash

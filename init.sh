@@ -17,6 +17,7 @@ PROJECT_NAME=$(jq -r '.PROJECT_NAME' "$INITJSON")
 LOCATION=$(jq -r '.LOCATION' "$INITJSON")
 THEME_REPO_NAME=$(jq -r '.THEME_REPO_NAME' "$INITJSON")
 readarray -t CONTENTREPOS < <(jq -r '.REPOS[]' "$INITJSON")
+readarray -t CONTENTREPOSONLY < <(jq -r '.REPOS[]' "$INITJSON")
 CONTENTREPOS+=("$THEME_REPO_NAME")
 
 current_dir=$(pwd)
@@ -266,20 +267,6 @@ create_github_secrets() {
   done
 
   for repo in "${CONTENTREPOS[@]}"; do
-    gh secret set PAT -b "$PAT" --repo ${GITHUB_ORG}/$repo || {
-      echo "Error: Failed to set PAT secret for repository $repo. Exiting."
-      exit 1
-    }
-    sleep 10
-  done
-  for repo in "${CONTENTREPOS[@]}"; do
-    gh secret set CONTROL_REPO -b "${GITHUB_ORG}/${CONTROL_REPO}" --repo ${GITHUB_ORG}/$repo || {
-      echo "Error: Failed to set CONTROL_REPO secret for repository $repo. Exiting."
-      exit 1
-    }
-    sleep 10
-  done
-  for repo in "${CONTENTREPOS[@]}"; do
     secret_key=$(cat $HOME/.ssh/id_ed25519-$repo)
     normalized_repo=$(echo "$repo" | tr '-' '_' | tr '[:lower:]' '[:upper:]')
     gh secret set ${normalized_repo}_SSH_PRIVATE_KEY -b "$secret_key" || {
@@ -287,8 +274,17 @@ create_github_secrets() {
       exit 1
     }
     sleep 10
+    gh secret set PAT -b "$PAT" --repo ${GITHUB_ORG}/$repo || {
+      echo "Error: Failed to set PAT secret for repository $repo. Exiting."
+      exit 1
+    }
+    sleep 10
+    gh secret set CONTROL_REPO -b "${GITHUB_ORG}/${CONTROL_REPO}" --repo ${GITHUB_ORG}/$repo || {
+      echo "Error: Failed to set CONTROL_REPO secret for repository $repo. Exiting."
+      exit 1
+    }
+    sleep 10
   done
-
 }
 
 # Function to handle deploy keys for repositories
@@ -308,16 +304,25 @@ handle_deploy_keys() {
 generate_github_action() {
   local tpl_file="docs-builder.tpl"
   local output_file=".github/workflows/docs-builder.yml"
+  local theme_secret_key_name="$(echo "$THEME_REPO_NAME" | tr '[:lower:]-' '[:upper:]_')_SSH_PRIVATE_KEY"
   mkdir -p "$(dirname "$output_file")"
 
   # Start building the clone repo commands string
   local clone_commands=""
+  clone_commands+="      - name: Clone Theme\n"
+  clone_commands+="        shell: bash\n"
+  clone_commands+="        run: |\n"
+  clone_commands+="          if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi\n"
+  clone_commands+="          echo '\${{ secrets.${theme_secret_key_name}}}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519\n"
+  clone_commands+="          mkdir -p src/theme/docs\n"
+  clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${THEME_REPO_NAME}.git docs/theme\n\n"
+  
   clone_commands+="      - name: Clone Content\n"
   clone_commands+="        shell: bash\n"
   clone_commands+="        run: |\n"
 
   # Loop through each repository and append commands
-  for repo in "${CONTENTREPOS[@]}"; do
+  for repo in "${CONTENTREPOSONLY[@]}"; do
     local secret_key_name="$(echo "$repo" | tr '[:lower:]-' '[:upper:]_')_SSH_PRIVATE_KEY"
     clone_commands+="          if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi\n"
     clone_commands+="          echo '\${{ secrets.${secret_key_name} }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519\n"

@@ -206,7 +206,8 @@ jobs:
           git clone git@github.com:${{ github.repository_owner }}/deletemerepo.git src/deletemerepo/docs
           cp -a docs/theme src/deletemerepo/docs/
           echo 'INHERIT: docs/theme/mkdocs.yml' > /home/runner/work/.github/.github/src/deletemerepo/mkdocs.yml
-          cd /home/runner/work/.github/.github/src/deletemerepo && mkdocs build -d /home/runner/work/.github/.github/build/deletemerepo && mv /home/runner/work/.github/.github/build/deletemerepo /home/runner/work/.github/.github/site/
+          echo ${{ github.workspace }}
+          #cd /home/runner/work/.github/.github/src/deletemerepo && mkdocs build -d /home/runner/work/.github/.github/build/deletemerepo && mv /home/runner/work/.github/.github/build/deletemerepo /home/runner/work/.github/.github/site/
 
       - name: Build Docs
         shell: bash

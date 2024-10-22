@@ -194,18 +194,8 @@ jobs:
           REPOS=$(jq -r '[.REPOS[] | ascii_upcase] | join(" ")' config.json)
           echo "REPOS=$REPOS" >> $GITHUB_ENV
         shell: bash
-  
-      - name: Clone Content
-        shell: bash
-        run: |
-          if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi
-          echo '${{ secrets.DELETEMEREPO_SSH_PRIVATE_KEY }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
-          mkdir -p src/deletemerepo/docs
-          git clone git@github.com:${{ github.repository_owner }}/deletemerepo.git src/deletemerepo/docs
-          if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi
-          echo '${{ secrets.DOCS_THEME_SSH_PRIVATE_KEY }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
-          mkdir -p src/docs-theme/docs
-          git clone git@github.com:${{ github.repository_owner }}/docs-theme.git src/docs-theme/docs
+
+      %%INSERTCLONECONTENT%%
 
       - name: Build Docs
         shell: bash

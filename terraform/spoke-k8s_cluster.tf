@@ -291,9 +291,6 @@ resource "azurerm_kubernetes_flux_configuration" "flux_configuration" {
   depends_on = [
     azurerm_kubernetes_cluster_extension.flux_extension
   ]
-  local_auth_reference {
-    name = kubernetes_secret.github_auth_secret.metadata[0].name
-  }
 }
 
 

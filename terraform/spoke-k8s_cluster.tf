@@ -241,13 +241,6 @@ data "external" "git_url" {
   program = ["sh", "-c", "git -C ${path.module}/.. config --get remote.origin.url | jq -R -r 'split(\"\\n\") | map(select(length > 0)) | map({url: .}) | add'"]
 }
 
-#data "external" "git_url" {
-#  program = ["sh", "-c", <<EOT
-#  curl -H "Authorization: token ${var.github_token}" -s https://api.github.com/repos/${path.module}/.. | jq -R -r 'split("\\n") | map(select(length > 0)) | map({url: .}) | add'
-#  EOT
-#  ]
-#}
-
 resource "kubernetes_secret" "github_auth_secret" {
   metadata {
     name      = "github-auth-secret"
@@ -270,7 +263,7 @@ resource "azurerm_kubernetes_flux_configuration" "flux_configuration" {
     reference_type           = "branch"
     reference_value          = data.git_repository.current.branch
     sync_interval_in_seconds = 60
-    local_auth_reference     = "github-auth-secret"
+    local_auth_reference     = kubernetes_secret.github_auth_secret.metadata[0].name
   }
   kustomizations {
     name                       = "infrastructure"
@@ -298,6 +291,9 @@ resource "azurerm_kubernetes_flux_configuration" "flux_configuration" {
   depends_on = [
     azurerm_kubernetes_cluster_extension.flux_extension
   ]
+  local_auth_reference {
+    name = kubernetes_secret.github_auth_secret.metadata[0].name
+  }
 }
 
 

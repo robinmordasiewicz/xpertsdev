@@ -1,5 +1,5 @@
 ---
-name: "terraform"
+name: "infrastructure"
 
 on: #  yamllint disable-line rule:truthy
   workflow_dispatch:
@@ -55,13 +55,6 @@ jobs:
     steps:
       - name: Github repository checkout
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871
-
-      - name: enable-azurerm-backend
-        env:
-          ANSIBLE_LOCALHOST_WARNING: false
-          ANSIBLE_INVENTORY_UNPARSED_WARNING: false
-        run: |
-          ansible-playbook enable-azurerm-backend.yml
 
       - name: Microsoft Azure Authentication
         uses: azure/login@f83d0254638e35ef1165887ce2c56be3d11c3eb4

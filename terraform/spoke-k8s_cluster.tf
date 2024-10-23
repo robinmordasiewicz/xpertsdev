@@ -208,6 +208,9 @@ resource "null_resource" "secret" {
   depends_on = [null_resource.kube_config]
 
   provisioner "local-exec" {
+    environment = {
+      KUBECONFIG = base64encode(var.kubeconfig)
+    }
     interpreter = ["bash", "-c"]
     command     = <<-EOF
       kubectl apply -f - <<EOF2

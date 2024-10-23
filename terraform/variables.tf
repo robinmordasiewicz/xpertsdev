@@ -218,7 +218,7 @@ variable "hub-nva-vip" {
 }
 
 variable "hub-nva-management-action" {
-  default     = "Deny"
+  default     = "Allow"
   description = "Allow or Deny access to Management"
   type        = string
   validation {
@@ -232,12 +232,6 @@ variable "spoke-aks-node-image" {
   description = "Container server image product"
   type        = string
 }
-
-#variable "spoke-aks-node-image-gpu" {
-#  default     = false
-#  description = "Set to true to enable GPU workloads"
-#  type        = bool
-#}
 
 variable "spoke-k8s-node-pool-gpu" {
   default     = false

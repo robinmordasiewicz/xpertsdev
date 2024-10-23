@@ -167,8 +167,11 @@ resource "azurerm_monitor_data_collection_rule_association" "this" {
 }
 
 resource "null_resource" "kube_config" {
+  #triggers = {
+  #  kube_config_exists = "${fileexists("~/.kube/config")}"
+  #}
   triggers = {
-    kube_config_exists = "${fileexists("~/.kube/config")}"
+    always = timestamp()
   }
   depends_on = [azurerm_kubernetes_cluster.kubernetes_cluster]
   provisioner "local-exec" {

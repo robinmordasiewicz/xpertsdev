@@ -61,7 +61,8 @@ resource "azurerm_kubernetes_cluster" "kubernetes_cluster" {
   #sku_tier = "Premium"
   #support_plan                      = "AKSLongTermSupport"
   #kubernetes_version                = "1.27"
-  sku_tier = "Free"
+  sku_tier = "Standard"
+  cost_analysis_enabled = true
   support_plan = "KubernetesOfficial"
   kubernetes_version = "1.30"
   node_resource_group               = "MC-${azurerm_resource_group.azure_resource_group.name}"

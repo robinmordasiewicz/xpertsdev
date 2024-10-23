@@ -13,6 +13,12 @@ variable "github_token" {
   description = "GitHub token for authenticating to the repository"
 }
 
+variable "control_repo_ssh_private_key" {
+    type        = string
+  description = "GitHub deploy-key for authenticating to the repository"
+}
+
+
 variable "location" {
   default     = "eastus"
   description = "Azure region for resource group."

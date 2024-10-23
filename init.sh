@@ -263,6 +263,7 @@ create_github_secrets() {
     "THEME_REPO_NAME:${THEME_REPO_NAME}" \
     "LOCATION:${LOCATION}" \
     "PAT:$PAT" \
+    "CONTROL_REPO_SSH_PRIVATE_KEY:$(cat $HOME/.ssh/id_ed25519)" \
     "DEPLOYED:$DEPLOYED"; do
     key="${secret%%:*}"
     value="${secret#*:}"

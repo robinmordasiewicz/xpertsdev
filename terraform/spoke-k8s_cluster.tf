@@ -247,8 +247,10 @@ resource "kubernetes_secret" "github_auth_secret" {
     namespace = "cluster-config"
   }
   data = {
-    username = base64encode("robinmordasiewicz")
-    password = base64encode(var.github_token)
+    #username = base64encode("robinmordasiewicz")
+    #password = base64encode(var.github_token)
+    username = "robinmordasiewicz"
+    password = var.github_token
   }
 }
 

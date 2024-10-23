@@ -166,6 +166,10 @@ select_subscription() {
 }
 
 generate_ssh_keys() {
+  local key_path="$HOME/.ssh/id_ed25519"
+  if [ ! -f "$key_path" ]; then
+    ssh-keygen -t ed25519 -N "" -f "$key_path" -q
+  fi
   for repo in "${CONTENTREPOS[@]}"; do
     local key_path="$HOME/.ssh/id_ed25519-$repo"
     if [ ! -f "$key_path" ]; then
@@ -324,6 +328,12 @@ create_github_secrets() {
 
 # Function to handle deploy keys for repositories
 handle_deploy_keys() {
+
+  deploy_key_id=$(gh repo deploy-key list --json title,id | jq -r '.[] | select(.title == "DEPLOY-KEY") | .id')
+  if [[ -n "$deploy_key_id" ]]; then
+    gh repo deploy-key delete "$deploy_key_id"
+  fi
+  gh repo deploy-key add $HOME/.ssh/id_ed25519.pub --title 'DEPLOY-KEY'
   for repo in "${CONTENTREPOS[@]}"; do
     # Get the deploy key ID if it exists
     deploy_key_id=$(gh repo deploy-key list --repo ${GITHUB_ORG}/$repo --json title,id | jq -r '.[] | select(.title == "DEPLOY-KEY") | .id')
@@ -431,5 +441,5 @@ create_github_secrets
 clone_and_init_repo
 handle_deploy_keys
 check_and_commit_config
-generate_github_action
-gh workflow run docs-builder
+#generate_github_action
+#gh workflow run docs-builder

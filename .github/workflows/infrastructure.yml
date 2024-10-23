@@ -85,6 +85,9 @@ jobs:
           ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          TF_VAR_project: ${{ secrets.PROJECTNAME }}
+          TF_VAR_location: ${{ secrets.LOCATION }}
+          TF_VAR_github_token: ${{ secrets.PAT }}
           TF_IN_AUTOMATION: true
         run: |
           export exitcode=0
@@ -151,24 +154,10 @@ jobs:
       - name: Github repository checkout
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871
 
-      - name: enable-azurerm-backend
-        run: |
-          ansible-playbook enable-azurerm-backend.yml
-
       - name: Microsoft Azure Authentication
         uses: azure/login@f83d0254638e35ef1165887ce2c56be3d11c3eb4
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-#      - name: ACR login
-#        uses: azure/docker-login@15c4aadf093404726ab2ff205b2cdd33fa6d054c
-#        with:
-#          login-server: "${{ secrets.PROJECTNAME }}.azurecr.io"
-#          username: ${{ secrets.ARM_CLIENT_ID }}
-#          password: ${{ secrets.ARM_CLIENT_SECRET }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349
 
       - name: Hashicorp Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
@@ -196,10 +185,13 @@ jobs:
       - name: Terraform Apply
         id: apply
         env:
-          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+          TF_VAR_project: ${{ secrets.PROJECTNAME }}
+          TF_VAR_location: ${{ secrets.LOCATION }}
+          TF_VAR_github_token: ${{ secrets.PAT }}
           TF_IN_AUTOMATION: true
         run: terraform -chdir=terraform apply -auto-approve tfplan
 
@@ -245,6 +237,9 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          TF_VAR_project: ${{ secrets.PROJECTNAME }}
+          TF_VAR_location: ${{ secrets.LOCATION }}
+          TF_VAR_github_token: ${{ secrets.PAT }}
           TF_IN_AUTOMATION: true
         run: |
           terraform -chdir=terraform destroy -auto-approve

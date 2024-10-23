@@ -265,7 +265,9 @@ resource "azurerm_kubernetes_flux_configuration" "flux_configuration" {
     reference_type           = "branch"
     reference_value          = data.git_repository.current.branch
     sync_interval_in_seconds = 60
-    local_auth_reference     = kubernetes_secret.github_auth_secret.metadata[0].name
+    #local_auth_reference     = kubernetes_secret.github_auth_secret.metadata[0].name
+    https_user = "robinmordasiewicz"
+    https_key_base64 = base64encode(var.github_token)
   }
   kustomizations {
     name                       = "infrastructure"

@@ -16,9 +16,11 @@ DEPLOYED=$(jq -r '.DEPLOYED' "$INITJSON")
 PROJECT_NAME=$(jq -r '.PROJECT_NAME' "$INITJSON")
 LOCATION=$(jq -r '.LOCATION' "$INITJSON")
 THEME_REPO_NAME=$(jq -r '.THEME_REPO_NAME' "$INITJSON")
+LANDING_PAGE_REPO_NAME=$(jq -r '.LANDING_PAGE_REPO_NAME' "$INITJSON")
 readarray -t CONTENTREPOS < <(jq -r '.REPOS[]' "$INITJSON")
 readarray -t CONTENTREPOSONLY < <(jq -r '.REPOS[]' "$INITJSON")
 CONTENTREPOS+=("$THEME_REPO_NAME")
+CONTENTREPOS+=("$LANDING_PAGE_REPO_NAME")
 
 current_dir=$(pwd)
 
@@ -422,9 +424,6 @@ check_and_commit_config() {
   fi
 }
 
-generate_github_action
-exit 0
-
 # Main execution flow
 check_git_status
 ensure_azure_login
@@ -440,5 +439,5 @@ create_github_secrets
 clone_and_init_repo
 handle_deploy_keys
 check_and_commit_config
-#generate_github_action
-#gh workflow run docs-builder
+generate_github_action
+gh workflow run docs-builder

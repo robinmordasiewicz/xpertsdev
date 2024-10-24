@@ -61,6 +61,13 @@ resource "azurerm_role_assignment" "route_table_network_contributor" {
   skip_service_principal_aad_check = true
 }
 
+resource "azurerm_role_assignment" "acr_role_assignment" {
+  principal_id                     = azurerm_kubernetes_cluster.kubernetes_cluster.kubelet_identity[0].object_id
+  role_definition_name             = "AcrPull"
+  scope                            = azurerm_container_registry.container_registry.id
+  skip_service_principal_aad_check = true
+}
+
 resource "azurerm_kubernetes_cluster" "kubernetes_cluster" {
   depends_on          = [azurerm_virtual_network_peering.spoke-to-hub_virtual_network_peering, azurerm_linux_virtual_machine.hub-nva_virtual_machine]
   name                = "spoke_kubernetes_cluster"
@@ -113,8 +120,9 @@ resource "azurerm_kubernetes_cluster" "kubernetes_cluster" {
     pod_cidr = var.spoke-aks_pod_cidr
   }
   identity {
-    type         = "UserAssigned"
-    identity_ids = [azurerm_user_assigned_identity.my_identity.id]
+    type = "SystemAssigned"
+    #type         = "UserAssigned"
+    #identity_ids = [azurerm_user_assigned_identity.my_identity.id]
   }
 }
 
@@ -138,12 +146,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "node-pool" {
   vnet_subnet_id    = azurerm_subnet.spoke_subnet.id
 }
 
-resource "azurerm_role_assignment" "acr_role_assignment" {
-  principal_id                     = azurerm_kubernetes_cluster.kubernetes_cluster.kubelet_identity[0].object_id
-  role_definition_name             = "AcrPull"
-  scope                            = azurerm_container_registry.container_registry.id
-  skip_service_principal_aad_check = true
-}
+
 
 resource "azurerm_monitor_data_collection_rule" "this" {
   name                = "rule-${azurerm_resource_group.azure_resource_group.name}-${azurerm_resource_group.azure_resource_group.location}"

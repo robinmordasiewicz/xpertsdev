@@ -1,5 +1,5 @@
 resource "azurerm_container_registry" "container_registry" {
-  name                          = var.project
+  name                          = "acr"
   resource_group_name = azurerm_resource_group.azure_resource_group.name
   location = azurerm_resource_group.azure_resource_group.location
   sku                           = "Premium"

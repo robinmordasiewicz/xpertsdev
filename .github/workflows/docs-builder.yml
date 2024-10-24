@@ -166,6 +166,7 @@ jobs:
           echo "${{ env.image_version }}" > VERSION
           rm -rf docs/theme/
           rm -rf src/
+          rm .htpasswd
    
       - name: Create Pull Request
         id: create_pr

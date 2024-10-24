@@ -32,12 +32,12 @@ jobs:
         name: ${{ github.ref_name }} deployed is ${{ vars.DEPLOYED }}
         shell: bash
         run: |
-          env
           if [[ -n "${{ vars.DEPLOYED }}" ]]
           then
             if [[ "${{ vars.DEPLOYED }}" == "true" ]]
             then
               echo 'action=build' >> "${GITHUB_OUTPUT}"
+            fi
           else
             echo 'action=skip' >> "${GITHUB_OUTPUT}"
           fi

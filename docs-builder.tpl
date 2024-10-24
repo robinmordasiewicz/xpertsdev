@@ -8,7 +8,6 @@ on:
     paths:
       - "Dockerfile"
       - "docs.conf"
-      - "docs/**"
       - "mkdocs.yml"
     branches:
       - "main"
@@ -23,7 +22,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  terraform:
+  init:
     name: Job Init
     runs-on: ubuntu-latest
     outputs:
@@ -38,26 +37,20 @@ jobs:
           then
             if [[ "${{ vars.DEPLOYED }}" == "true" ]]
             then
-              echo 'action=apply' >> "${GITHUB_OUTPUT}"
-            else
-              echo 'action=destroy' >> "${GITHUB_OUTPUT}"
-            fi
+              echo 'action=build' >> "${GITHUB_OUTPUT}"
           else
             echo 'action=skip' >> "${GITHUB_OUTPUT}"
           fi
 
-  plan:
-    needs: [terraform]
-    if: needs.terraform.outputs.action == 'apply'
-    name: Terraform Plan
+  build:
+    name: Build Container
+    if: needs.init.outputs.action == 'build'
     runs-on: ubuntu-latest
-    outputs:
-      image_version: ${{ steps.set_version.outputs.image_version }}
-
+    needs: [init]
     steps:
       - name: Github repository checkout
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871
-
+ 
       - name: Check for VERSION file and set version
         id: set_version
         run: |
@@ -79,17 +72,6 @@ jobs:
           echo "New version: $NEW_VERSION"
           echo "image_version=$NEW_VERSION" >> $GITHUB_ENV
           echo "image_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
-
-  apply:
-    name: Terraform Apply
-    if: needs.terraform.outputs.action == 'apply'
-    runs-on: ubuntu-latest
-    needs: [terraform, plan]
-    env:
-      image_version: ${{ needs.plan.outputs.image_version }}
-    steps:
-      - name: Github repository checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871
 
       - name: setup ssh config
         shell: bash

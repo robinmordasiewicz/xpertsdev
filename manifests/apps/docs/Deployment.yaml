@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: docs
-          image: ddibwzzmtpldcnvemtqjegdzl.azurecr.io/docs:0.0.1
+          image: ddibwzzmtpldcnvemtqjegdzl.azurecr.io/docs:0.0.3
           ports:
           - containerPort: 80
 

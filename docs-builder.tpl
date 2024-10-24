@@ -80,7 +80,6 @@ jobs:
           echo "image_version=$NEW_VERSION" >> $GITHUB_ENV
           echo "image_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
-
   apply:
     name: Terraform Apply
     if: needs.terraform.outputs.action == 'apply'
@@ -130,9 +129,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349
   
-      - name: Build Container  
-        run: |
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}.azurecr.io/docs:${{ env.image_version }} .
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75
+        with:
+          push: true
+          tags: ${{ secrets.ACR_LOGIN_SERVER }}/docs:${{ env.image_version }},${{ secrets.ACR_LOGIN_SERVER }}/docs:latest
 
       - name: Configure Git
         run: |
@@ -162,7 +163,7 @@ jobs:
 
       - name: Enable Pull Request Automerge
         if: steps.create_pr.outputs.pull-request-operation == 'created'
-        uses: peter-evans/enable-pull-request-automerge@v3
+        uses: peter-evans/enable-pull-request-automerge@a660677d5469627102a1c1e11409dd063606628d
         env:
           GH_TOKEN: ${{ secrets.PAT }}
         with:

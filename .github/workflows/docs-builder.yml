@@ -20,7 +20,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   terraform:
@@ -58,7 +58,7 @@ jobs:
     steps:
       - name: Github repository checkout
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871
-        
+
       - name: Check for VERSION file and set version
         id: set_version
         run: |

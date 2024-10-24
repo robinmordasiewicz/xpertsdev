@@ -126,10 +126,6 @@ resource "azurerm_kubernetes_cluster_node_pool" "node-pool" {
   max_pods          = "50"
   zones             = ["1"]
   vnet_subnet_id    = azurerm_subnet.spoke_subnet.id
-  identity {
-    type         = "UserAssigned"
-    identity_ids = [azurerm_user_assigned_identity.my_identity.id]
-  }
 }
 
 resource "azurerm_role_assignment" "acr_role_assignment" {

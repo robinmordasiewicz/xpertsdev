@@ -367,7 +367,7 @@ generate_github_action() {
   clone_commands+="      - name: Clone Content\n"
   clone_commands+="        shell: bash\n"
   clone_commands+="        run: |\n"
-  clone_commands+="          mkdocs build -c -d site/\n"
+  clone_commands+="          #mkdocs build -c -d site/\n"
 
   # Loop through each repository and append commands
   for repo in "${CONTENTREPOSONLY[@]}"; do
@@ -378,7 +378,7 @@ generate_github_action() {
     clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${repo}.git src/${repo}/docs\n"
     clone_commands+="          cp -a docs/theme src/${repo}/docs/\n"
     clone_commands+="          echo 'INHERIT: docs/theme/mkdocs.yml' > \${{ github.workspace }}/src/${repo}/mkdocs.yml\n"
-    clone_commands+="          cd \${{ github.workspace }}/src/${repo} && mkdocs build -d \${{ github.workspace }}/build/${repo} && mv \${{ github.workspace }}/build/${repo} \${{ github.workspace }}/site/\n"
+    clone_commands+="          #cd \${{ github.workspace }}/src/${repo} && mkdocs build -d \${{ github.workspace }}/build/${repo} && mv \${{ github.workspace }}/build/${repo} \${{ github.workspace }}/site/\n"
   done
 
   # Properly format and replace the placeholder with the generated clone commands

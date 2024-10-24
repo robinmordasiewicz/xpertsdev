@@ -5,4 +5,4 @@ site_description: Fortinet Subject Matter Experts Conference
 # - childpages-card-grid:
 #     include_all: True
 #     cards_title: 'Child pages'
-INHERIT: docs/theme/mkdocs.yml
+#INHERIT: docs/theme/mkdocs.yml

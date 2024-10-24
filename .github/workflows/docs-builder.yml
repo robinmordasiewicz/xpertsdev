@@ -168,7 +168,6 @@ jobs:
           echo "${{ env.image_version }}" > VERSION
           rm -rf docs/theme/
           rm -rf src/
-          rm .htpasswd
    
       - name: Create Pull Request
         id: create_pr
@@ -182,7 +181,7 @@ jobs:
 
       - name: Enable Pull Request Automerge
         if: steps.create_pr.outputs.pull-request-operation == 'created'
-        uses: peter-evans/enable-pull-request-automerge@v3
+        uses: peter-evans/enable-pull-request-automerge@a660677d5469627102a1c1e11409dd063606628d
         env:
           GH_TOKEN: ${{ secrets.PAT }}
         with:

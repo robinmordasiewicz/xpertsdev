@@ -17,6 +17,7 @@ PROJECT_NAME=$(jq -r '.PROJECT_NAME' "$INITJSON")
 LOCATION=$(jq -r '.LOCATION' "$INITJSON")
 THEME_REPO_NAME=$(jq -r '.THEME_REPO_NAME' "$INITJSON")
 LANDING_PAGE_REPO_NAME=$(jq -r '.LANDING_PAGE_REPO_NAME' "$INITJSON")
+DOCS_BUILDER_REPO_NAME=$(jq -r '.DOCS_BUILDER_REPO_NAME' "$INITJSON")
 readarray -t CONTENTREPOS < <(jq -r '.REPOS[]' "$INITJSON")
 readarray -t CONTENTREPOSONLY < <(jq -r '.REPOS[]' "$INITJSON")
 CONTENTREPOS+=("$THEME_REPO_NAME")
@@ -32,7 +33,7 @@ fi
 
 # Extract GitHub organization and control repo
 GITHUB_ORG=$(git config --get remote.origin.url | sed -n 's#.*/\([^/]*\)/.*#\1#p')
-CONTROL_REPO=$(git config --get remote.origin.url | sed -n 's#.*/\([^/]*\)\.git#\1#p')
+INFRASTRUCTURE_REPO_NAME=$(git config --get remote.origin.url | sed -n 's#.*/\([^/]*\)\.git#\1#p')
 
 if [[ -z "$GITHUB_ORG" ]]; then
   echo "Could not detect GitHub organization. Exiting."
@@ -266,7 +267,7 @@ create_github_secrets() {
     "LOCATION:${LOCATION}" \
     "PAT:$PAT" \
     "ACR_LOGIN_SERVER:$(tr -cd 'a-z' </dev/urandom | head -c 25)" \
-    "CONTROL_REPO_SSH_PRIVATE_KEY:$(cat $HOME/.ssh/id_ed25519)" \
+    "INFRASTRUCTURE_REPO_NAME_SSH_PRIVATE_KEY:$(cat $HOME/.ssh/id_ed25519)" \
     "DEPLOYED:$DEPLOYED"; do
     key="${secret%%:*}"
     value="${secret#*:}"
@@ -315,14 +316,14 @@ create_github_secrets() {
       fi
     done
     for ((attempt=1; attempt<=max_retries; attempt++)); do
-      if gh secret set CONTROL_REPO -b "${GITHUB_ORG}/${CONTROL_REPO}" --repo ${GITHUB_ORG}/$repo ; then
+      if gh secret set DOCS_BUILDER_REPO_NAME -b "${GITHUB_ORG}/${DOCS_BUILDER_REPO_NAME}" --repo ${GITHUB_ORG}/$repo ; then
         break
       else
         if [[ $attempt -lt $max_retries ]]; then
-          echo "Warning: Failed to set GitHub secret CONTROL_REPO. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
+          echo "Warning: Failed to set GitHub secret DOCS_BUILDER_REPO_NAME. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
           sleep $retry_interval
         else
-          echo "Error: Failed to set GitHub secret CONTROL_REPO after $max_retries attempts. Exiting."
+          echo "Error: Failed to set GitHub secret DOCS_BUILDER_REPO_NAME after $max_retries attempts. Exiting."
           exit 1
         fi
       fi

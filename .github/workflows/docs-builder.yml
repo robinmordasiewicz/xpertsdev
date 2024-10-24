@@ -108,24 +108,20 @@ jobs:
         run: |
           if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi
           echo '${{ secrets.DOCS_THEME_SSH_PRIVATE_KEY}}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
-          mkdir -p src/theme/docs
           git clone git@github.com:${{ github.repository_owner }}/docs-theme.git docs/theme
 
       - name: Clone Content
         shell: bash
         run: |
-          #mkdocs build -c -d site/
           if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi
           echo '${{ secrets.DELETEMEREPO_SSH_PRIVATE_KEY }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519
           mkdir -p src/deletemerepo
           git clone git@github.com:${{ github.repository_owner }}/deletemerepo.git src/deletemerepo/docs
-          cp -a docs/theme src/deletemerepo/docs/
-          echo 'INHERIT: docs/theme/mkdocs.yml' > ${{ github.workspace }}/src/deletemerepo/mkdocs.yml
-          #cd ${{ github.workspace }}/src/deletemerepo && mkdocs build -d ${{ github.workspace }}/build/deletemerepo && mv ${{ github.workspace }}/build/deletemerepo ${{ github.workspace }}/site/
 
       - name: Build MkDocs site
         run: |
           docker run --rm -v ${{ github.workspace }}:/docs ghcr.io/amerintlxperts/mkdocs:latest build -c -d site/
+          ls -la
 
       - name: Create htaccess password
         run: |
@@ -168,6 +164,7 @@ jobs:
           echo "${{ env.image_version }}" > VERSION
           rm -rf docs/theme/
           rm -rf src/
+          rm .htpasswd
    
       - name: Create Pull Request
         id: create_pr

@@ -46,21 +46,48 @@ jobs:
             echo 'action=skip' >> "${GITHUB_OUTPUT}"
           fi
 
+  plan:
+    needs: [terraform]
+    if: needs.terraform.outputs.action == 'apply'
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    outputs:
+      image_version: ${{ steps.set_version.outputs.image_version }}
+
+    steps:
+      - name: Check for VERSION file and set version
+        id: set_version
+        run: |
+          # Check if VERSION file exists
+          if [ -f VERSION ]; then
+            echo "VERSION file exists."
+            VERSION=$(cat VERSION)
+            if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "VERSION file does not contain a valid semantic version. Exiting."
+              exit 1
+            fi
+            IFS='.' read -r -a version_parts <<< "$VERSION"
+            ((version_parts[2]++))
+            NEW_VERSION="${version_parts[0]}.${version_parts[1]}.${version_parts[2]}"
+          else
+            echo "VERSION file does not exist. Setting version to 0.0.1."
+            NEW_VERSION="0.0.1"
+          fi
+          echo "New version: $NEW_VERSION"
+          echo "image_version=$NEW_VERSION" >> $GITHUB_ENV
+          echo "image_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+
   apply:
     name: Terraform Apply
     if: needs.terraform.outputs.action == 'apply'
     runs-on: ubuntu-latest
-    needs: [terraform]
+    needs: [terraform, plan]
     env:
       image_version: ${{ needs.plan.outputs.image_version }}
     steps:
       - name: Github repository checkout
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871
-
-      - name: Install mkdocs
-        run: |
-          pip install --upgrade pip
-          pip install -U -r requirements.txt
 
       - name: setup ssh config
         shell: bash
@@ -78,7 +105,7 @@ jobs:
 
       - name: Build MkDocs site
         run: |
-          docker run --rm -it -v ${{ github.workspace }}:/docs ghcr.io/amerintlxperts/mkdocs:latest build -c -d site/
+          docker run --rm -v ${{ github.workspace }}:/docs ghcr.io/amerintlxperts/mkdocs:latest build -c -d site/
 
       - name: Create htaccess password
         run: |
@@ -119,7 +146,6 @@ jobs:
           echo "${{ env.image_version }}" > VERSION
           rm -rf docs/theme/
           rm -rf src/
-          rm terraform/tfplan
    
       - name: Create Pull Request
         id: create_pr

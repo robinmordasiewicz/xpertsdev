@@ -14,7 +14,7 @@ variable "github_token" {
 }
 
 variable "control_repo_ssh_private_key" {
-    type        = string
+  type        = string
   description = "GitHub deploy-key for authenticating to the repository"
 }
 

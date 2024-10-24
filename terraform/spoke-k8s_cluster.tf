@@ -45,9 +45,9 @@ resource "azurerm_role_assignment" "kubernetes_contributor" {
 }
 
 resource "azurerm_role_assignment" "route_table_network_contributor" {
-  principal_id         = azurerm_user_assigned_identity.my_identity.principal_id
-  role_definition_name = "Network Contributor"
-  scope                = azurerm_resource_group.azure_resource_group.id
+  principal_id                     = azurerm_user_assigned_identity.my_identity.principal_id
+  role_definition_name             = "Network Contributor"
+  scope                            = azurerm_resource_group.azure_resource_group.id
   skip_service_principal_aad_check = true
 }
 
@@ -61,10 +61,10 @@ resource "azurerm_kubernetes_cluster" "kubernetes_cluster" {
   #sku_tier = "Premium"
   #support_plan                      = "AKSLongTermSupport"
   #kubernetes_version                = "1.27"
-  sku_tier = "Standard"
-  cost_analysis_enabled = true
-  support_plan = "KubernetesOfficial"
-  kubernetes_version = "1.30"
+  sku_tier                          = "Standard"
+  cost_analysis_enabled             = true
+  support_plan                      = "KubernetesOfficial"
+  kubernetes_version                = "1.30"
   node_resource_group               = "MC-${azurerm_resource_group.azure_resource_group.name}"
   role_based_access_control_enabled = true
   oidc_issuer_enabled               = true
@@ -75,7 +75,7 @@ resource "azurerm_kubernetes_cluster" "kubernetes_cluster" {
   #  ]
   #}
   oms_agent {
-    log_analytics_workspace_id = azurerm_log_analytics_workspace.log_analytics.id
+    log_analytics_workspace_id      = azurerm_log_analytics_workspace.log_analytics.id
     msi_auth_for_monitoring_enabled = true
   }
   default_node_pool {
@@ -120,12 +120,19 @@ resource "azurerm_kubernetes_cluster_node_pool" "node-pool" {
   node_labels = {
     "nvidia.com/gpu.present" = "true"
   }
-  os_disk_type          = "Ephemeral"
-  ultra_ssd_enabled     = true
-  os_disk_size_gb       = "256"
-  max_pods              = "50"
-  zones                 = ["1"]
-  vnet_subnet_id        = azurerm_subnet.spoke_subnet.id
+  os_disk_type      = "Ephemeral"
+  ultra_ssd_enabled = true
+  os_disk_size_gb   = "256"
+  max_pods          = "50"
+  zones             = ["1"]
+  vnet_subnet_id    = azurerm_subnet.spoke_subnet.id
+}
+
+resource "azurerm_role_assignment" "acr_role_assignment" {
+  principal_id                     = azurerm_kubernetes_cluster.kubernetes_cluster.kubelet_identity[0].object_id
+  role_definition_name             = "AcrPull"
+  scope                            = azurerm_container_registry.container_registry.id
+  skip_service_principal_aad_check = true
 }
 
 resource "azurerm_monitor_data_collection_rule" "this" {
@@ -241,19 +248,6 @@ data "external" "git_url" {
   program = ["sh", "-c", "git -C ${path.module}/.. config --get remote.origin.url | jq -R -r 'split(\"\\n\") | map(select(length > 0)) | map({url: .}) | add'"]
 }
 
-resource "kubernetes_secret" "github_auth_secret" {
-  metadata {
-    name      = "github-auth-secret"
-    namespace = "cluster-config"
-  }
-  data = {
-    #username = base64encode("robinmordasiewicz")
-    #password = base64encode(var.github_token)
-    username = "robinmordasiewicz"
-    password = var.github_token
-  }
-}
-
 resource "azurerm_kubernetes_flux_configuration" "flux_configuration" {
   name                              = "flux-configuration"
   cluster_id                        = azurerm_kubernetes_cluster.kubernetes_cluster.id
@@ -265,9 +259,6 @@ resource "azurerm_kubernetes_flux_configuration" "flux_configuration" {
     reference_type           = "branch"
     reference_value          = data.git_repository.current.branch
     sync_interval_in_seconds = 60
-    #local_auth_reference     = kubernetes_secret.github_auth_secret.metadata[0].name
-    #https_user = "robinmordasiewicz"
-    #https_key_base64 = base64encode(var.github_token)
     ssh_private_key_base64 = base64encode(var.control_repo_ssh_private_key)
   }
   kustomizations {

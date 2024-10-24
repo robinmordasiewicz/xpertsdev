@@ -18,6 +18,9 @@ variable "control_repo_ssh_private_key" {
   description = "GitHub deploy-key for authenticating to the repository"
 }
 
+variable "acr_login_server" {
+  type = string
+}
 
 variable "location" {
   default     = "eastus"

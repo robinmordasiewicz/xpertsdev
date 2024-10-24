@@ -96,7 +96,9 @@ jobs:
 
       - name: Create htaccess password
         run: |
+          pwd
           htpasswd -b -c .htpasswd ${{ secrets.PROJECTNAME }} ${{ secrets.HTPASSWD }}
+          ls -la
   
       - name: Microsoft Azure Authentication
         uses: azure/login@a65d910e8af852a8061c627c456678983e180302

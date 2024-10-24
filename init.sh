@@ -361,24 +361,18 @@ generate_github_action() {
   clone_commands+="        run: |\n"
   clone_commands+="          if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi\n"
   clone_commands+="          echo '\${{ secrets.${theme_secret_key_name}}}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519\n"
-  clone_commands+="          mkdir -p src/theme/docs\n"
   clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${THEME_REPO_NAME}.git docs/theme\n\n"
   
   clone_commands+="      - name: Clone Content\n"
   clone_commands+="        shell: bash\n"
   clone_commands+="        run: |\n"
-  clone_commands+="          #mkdocs build -c -d site/\n"
 
-  # Loop through each repository and append commands
   for repo in "${CONTENTREPOSONLY[@]}"; do
     local secret_key_name="$(echo "$repo" | tr '[:lower:]-' '[:upper:]_')_SSH_PRIVATE_KEY"
     clone_commands+="          if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi\n"
     clone_commands+="          echo '\${{ secrets.${secret_key_name} }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519\n"
     clone_commands+="          mkdir -p src/${repo}\n"
     clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${repo}.git src/${repo}/docs\n"
-    clone_commands+="          cp -a docs/theme src/${repo}/docs/\n"
-    clone_commands+="          echo 'INHERIT: docs/theme/mkdocs.yml' > \${{ github.workspace }}/src/${repo}/mkdocs.yml\n"
-    clone_commands+="          #cd \${{ github.workspace }}/src/${repo} && mkdocs build -d \${{ github.workspace }}/build/${repo} && mv \${{ github.workspace }}/build/${repo} \${{ github.workspace }}/site/\n"
   done
 
   # Properly format and replace the placeholder with the generated clone commands

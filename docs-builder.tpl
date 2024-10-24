@@ -108,6 +108,7 @@ jobs:
       - name: Build MkDocs site
         run: |
           docker run --rm -v ${{ github.workspace }}:/docs ghcr.io/amerintlxperts/mkdocs:latest build -c -d site/
+          ls -la
 
       - name: Create htaccess password
         run: |
@@ -150,6 +151,7 @@ jobs:
           echo "${{ env.image_version }}" > VERSION
           rm -rf docs/theme/
           rm -rf src/
+          rm .htpasswd
    
       - name: Create Pull Request
         id: create_pr

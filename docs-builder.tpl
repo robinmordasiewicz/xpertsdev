@@ -55,7 +55,6 @@ jobs:
       image_version: ${{ steps.set_version.outputs.image_version }}
 
     steps:
-    steps:
       - name: Github repository checkout
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871
 

@@ -3,6 +3,7 @@
     "deletemerepo"
   ],
   "THEME_REPO_NAME": "docs-theme",
+  "LANDING_PAGE_REPO_NAME": "landing-page",
   "DEPLOYED": "true",
   "PROJECT_NAME": "xpertsdev",
   "LOCATION": "eastus"

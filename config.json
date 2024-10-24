@@ -4,6 +4,7 @@
   ],
   "THEME_REPO_NAME": "docs-theme",
   "LANDING_PAGE_REPO_NAME": "landing-page",
+  "DOCS_BUILDER_REPO_NAME": "docs-builder",
   "DEPLOYED": "true",
   "PROJECT_NAME": "xpertsdev",
   "LOCATION": "eastus"

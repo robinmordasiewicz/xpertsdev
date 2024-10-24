@@ -90,6 +90,7 @@ jobs:
       - name: Build MkDocs site
         run: |
           id -u
+          id -g
           docker run --rm -v ${{ github.workspace }}:/docs ghcr.io/amerintlxperts/mkdocs:latest build -c -d site/
           ls -la site/
 

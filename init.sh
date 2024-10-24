@@ -263,6 +263,7 @@ create_github_secrets() {
     "THEME_REPO_NAME:${THEME_REPO_NAME}" \
     "LOCATION:${LOCATION}" \
     "PAT:$PAT" \
+    "ACR_LOGIN_SERVER:$(tr -cd 'a-z' </dev/urandom | head -c 25)" \
     "CONTROL_REPO_SSH_PRIVATE_KEY:$(cat $HOME/.ssh/id_ed25519)" \
     "DEPLOYED:$DEPLOYED"; do
     key="${secret%%:*}"

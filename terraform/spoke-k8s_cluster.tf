@@ -24,6 +24,16 @@ data "azurerm_kubernetes_service_versions" "current" {
   include_preview = false
 }
 
+resource "azurerm_container_registry" "container_registry" {
+  name                          = var.ACR_LOGIN_SERVER
+  resource_group_name           = azurerm_resource_group.azure_resource_group.name
+  location                      = azurerm_resource_group.azure_resource_group.location
+  sku                           = "Premium"
+  admin_enabled                 = false
+  public_network_access_enabled = true
+  anonymous_pull_enabled        = false
+}
+
 resource "azurerm_log_analytics_workspace" "log_analytics" {
   name                = "log-analytics"
   location            = azurerm_resource_group.azure_resource_group.location

@@ -22,9 +22,9 @@ spec:
   ingressClassName: fwb-ingress-controller
   defaultBackend:
     service:
-      name: ollama
+      name: docs
       port:
-        number: 11434
+        number: 80
   rules:
   - host: www.bankexample.com
     http:

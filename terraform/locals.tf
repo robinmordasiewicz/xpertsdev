@@ -22,10 +22,10 @@ locals {
       terms           = true
     },
     "fortiweb" = {
-      publisher       = "fortinet"
-      offer           = "fortinet_fortiweb-vm_v5"
-      size            = "Standard_F16s_v2"
-      version         = "latest"
+      publisher = "fortinet"
+      offer     = "fortinet_fortiweb-vm_v5"
+      size      = "Standard_F16s_v2"
+      version   = "latest"
       #sku             = "fortinet_fw-vm_payg_v3"
       sku = "fortinet_fw-vm_payg_v2"
       #sku = "fortinet_fw-vm"

@@ -54,6 +54,7 @@ jobs:
     outputs:
       image_version: ${{ steps.set_version.outputs.image_version }}
 
+    steps:
       - name: Check for VERSION file and set version
         id: set_version
         run: |

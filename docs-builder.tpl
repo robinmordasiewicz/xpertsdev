@@ -76,6 +76,10 @@ jobs:
 
       %%INSERTCLONEREPO%%
 
+      - name: Build MkDocs site
+        run: |
+          docker run --rm -it -v ${{ github.workspace }}:/docs ghcr.io/amerintlxperts/mkdocs:latest build -c -d site/
+
       - name: Create htaccess password
         run: |
           htpasswd -b -c .htpasswd ${{ secrets.PROJECTNAME }} ${{ secrets.HTPASSWD }}

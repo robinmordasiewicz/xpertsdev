@@ -428,6 +428,9 @@ check_and_commit_config() {
   fi
 }
 
+generate_github_action
+exit 0
+
 # Main execution flow
 check_git_status
 ensure_azure_login

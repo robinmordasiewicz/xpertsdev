@@ -6,7 +6,6 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "terraform/**.tf"
       - "Dockerfile"
       - "docs.conf"
       - "docs/**"
@@ -21,7 +20,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   terraform:
@@ -51,7 +50,7 @@ jobs:
     name: Terraform Apply
     if: needs.terraform.outputs.action == 'apply'
     runs-on: ubuntu-latest
-    needs: [terraform, plan]
+    needs: [terraform]
     env:
       image_version: ${{ needs.plan.outputs.image_version }}
     steps:
@@ -90,7 +89,7 @@ jobs:
       - name: ACR login
         uses: azure/docker-login@15c4aadf093404726ab2ff205b2cdd33fa6d054c
         with:
-          login-server: "${{ secrets.PROJECTNAME }}.azurecr.io"
+          login-server: "${{ secrets.ACR_LOGIN_SERVER }}.azurecr.io"
           username: ${{ secrets.ARM_CLIENT_ID }}
           password: ${{ secrets.ARM_CLIENT_SECRET }}
   
@@ -99,7 +98,7 @@ jobs:
   
       - name: Build Container  
         run: |
-          docker build -t ${{ secrets.PROJECTNAME }}.azurecr.io/docs:${{ env.image_version }} .
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}.azurecr.io/docs:${{ env.image_version }} .
 
       - name: Configure Git
         run: |

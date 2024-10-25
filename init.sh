@@ -277,7 +277,7 @@ create_infrastructure_secrets() {
     "LOCATION:${LOCATION}" \
     "PAT:$PAT" \
     "DOCS_BUILDER_REPO_NAME:$DOCS_BUILDER_REPO_NAME" \
-    "SSH_PRIVATE_KEY:$(cat $HOME/.ssh/id_ed25519-infrastructure)" \
+    "SSH_PRIVATE_KEY:$(cat $HOME/.ssh/id_ed25519-manifests)" \
     "MANIFESTS_REPO_NAME:${GITHUB_ORG}/${MANIFESTS_REPO_NAME}" \
     "DEPLOYED:$DEPLOYED"; do
     key="${secret%%:*}"

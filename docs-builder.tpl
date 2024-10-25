@@ -57,7 +57,7 @@ jobs:
       - name: ACR login
         uses: azure/docker-login@15c4aadf093404726ab2ff205b2cdd33fa6d054c
         with:
-          login-server: "${{ secrets.ACR_LOGIN_SERVER }}.azurecr.io"
+          login-server: "${{ secrets.ACR_LOGIN_SERVER }}"
           username: ${{ secrets.ARM_CLIENT_ID }}
           password: ${{ secrets.ARM_CLIENT_SECRET }}
 

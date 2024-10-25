@@ -8,7 +8,6 @@ on:
     paths:
       - "Dockerfile"
       - "docs.conf"
-      - "mkdocs.yml"
     branches:
       - "main"
 

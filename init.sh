@@ -428,6 +428,7 @@ check_and_commit_config() {
 
 # Main execution flow
 check_git_status
+exit 0
 ensure_azure_login
 ensure_github_login
 prompt_for_PAT

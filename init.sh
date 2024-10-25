@@ -355,7 +355,7 @@ handle_deploy_keys() {
 }
 
 copy_docs-builder-workflow_to_docs-builder_repo() {
-  local tpl_file="docs-builder.tpl"
+  local tpl_file="${current_dir}/docs-builder.tpl"
   local github_token="$PAT"
   local output_file=".github/workflows/docs-builder.yml"
   local theme_secret_key_name="$(echo "$THEME_REPO_NAME" | tr '[:lower:]-' '[:upper:]_')_SSH_PRIVATE_KEY"

@@ -385,31 +385,6 @@ generate_github_action() {
   echo ""
 }
 
-check_git_status() {
-    # Check if the current directory is a Git repository
-    if ! git rev-parse --is-inside-work-tree &>/dev/null; then
-        echo "Error: This script must be run from within a Git repository." >&2
-        return 1
-    fi
-
-    # Fetch the latest changes from the remote repository
-    git fetch &>/dev/null
-
-    # Check if the local branch is up to date with the remote branch
-    LOCAL_HASH=$(git rev-parse @)
-    REMOTE_HASH=$(git rev-parse @{u})
-    BASE_HASH=$(git merge-base @ @{u})
-
-    if [ "$LOCAL_HASH" = "$REMOTE_HASH" ]; then
-        echo "Local repository is up to date with the remote."
-    elif [ "$LOCAL_HASH" = "$BASE_HASH" ]; then
-        echo "Error: Local repository is behind the remote. Please pull the latest changes." >&2
-        return 1
-    else
-        echo "Local repository is ahead of or diverged from the remote, but this is acceptable."
-    fi
-}
-
 check_and_commit_config() {
   # Check if config.json has uncommitted changes
   if git status --porcelain | grep -q "config.json"; then
@@ -427,7 +402,7 @@ check_and_commit_config() {
 }
 
 # Main execution flow
-check_git_status
+
 exit 0
 ensure_azure_login
 ensure_github_login

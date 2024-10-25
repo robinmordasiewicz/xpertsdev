@@ -6,6 +6,7 @@
   "LANDING_PAGE_REPO_NAME": "landing-page",
   "DOCS_BUILDER_REPO_NAME": "docs-builder",
   "INFRASTRUCTURE_REPO_NAME": "infrastructure",
+  "MANIFESTS_REPO_NAME": "manifests",
   "DEPLOYED": "true",
   "PROJECT_NAME": "xpertsdev",
   "LOCATION": "eastus"

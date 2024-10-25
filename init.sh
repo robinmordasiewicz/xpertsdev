@@ -278,7 +278,7 @@ create_infrastructure_secrets() {
     "PAT:$PAT" \
     "DOCS_BUILDER_REPO_NAME:$DOCS_BUILDER_REPO_NAME" \
     "SSH_PRIVATE_KEY:$(cat $HOME/.ssh/id_ed25519-infrastructure)" \
-    "MANIFESTS_REPO_NAME:${MANIFESTS_REPO_NAME}"
+    "MANIFESTS_REPO_NAME:${MANIFESTS_REPO_NAME}" \
     "DEPLOYED:$DEPLOYED"; do
     key="${secret%%:*}"
     value="${secret#*:}"
@@ -307,6 +307,7 @@ create_docs-builder_secrets() {
     "ARM_CLIENT_ID:${clientId}" \
     "ARM_CLIENT_SECRET:${clientSecret}" \
     "DEPLOYED:$DEPLOYED" \
+    "MANIFESTS_REPO_NAME:$MANIFESTS_REPO_NAME" \
     "PAT:$PAT"; do
     key="${secret%%:*}"
     value="${secret#*:}"

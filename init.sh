@@ -460,6 +460,11 @@ create_azure_resources
 create_service_principal "$SUBSCRIPTION_ID"
 generate_ssh_keys
 check_and_create_repos
+gh api --method PATCH \
+  -H "Accept: application/vnd.github+json" \
+  /repos/${GITHUB_ORG}/${DOCS_BUILDER_REPO_NAME}/actions/permissions/workflow \
+  -f default_workflow_permissions=write \
+  -f can_approve_pull_request_reviews=true
 handle_deploy_keys
 create_docs-builder_secrets
 copy_docs-builder-workflow_to_docs-builder_repo

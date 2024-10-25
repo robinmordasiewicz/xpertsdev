@@ -271,11 +271,10 @@ create_infrastructure_secrets() {
     "ARM_CLIENT_ID:${clientId}" \
     "ARM_CLIENT_SECRET:${clientSecret}" \
     "AZURE_CREDENTIALS:${AZURE_CREDENTIALS}" \
-    "ACR_REGISTRY:${PROJECT_NAME}.azurecr.io" \
     "PROJECTNAME:${PROJECT_NAME}" \
     "LOCATION:${LOCATION}" \
     "PAT:$PAT" \
-    "ACR_LOGIN_SERVER:$(tr -cd 'a-z' </dev/urandom | head -c 25)" \
+    "DOCS_BUILDER_REPO_NAME:$DOCS_BUILDER_REPO_NAME" \
     "SSH_PRIVATE_KEY:$(cat $HOME/.ssh/id_ed25519-infrastructure)" \
     "DEPLOYED:$DEPLOYED"; do
     key="${secret%%:*}"
@@ -298,6 +297,30 @@ create_infrastructure_secrets() {
 
 create_docs-builder_secrets() {
   local secret_key
+
+  for secret in \
+    "PROJECTNAME:${PROJECT_NAME}" \
+    "AZURE_CREDENTIALS:${AZURE_CREDENTIALS}" \
+    "ARM_CLIENT_ID:${clientId}" \
+    "ARM_CLIENT_SECRET:${clientSecret}" \
+    "DEPLOYED:$DEPLOYED" \
+    "PAT:$PAT"; do
+    key="${secret%%:*}"
+    value="${secret#*:}"
+    for ((attempt=1; attempt<=max_retries; attempt++)); do
+      if gh secret set "$key" -b "$value" --repo ${GITHUB_ORG}/$DOCS_BUILDER_REPO_NAME; then
+        break
+      else
+        if [[ $attempt -lt $max_retries ]]; then
+          echo "Warning: Failed to set GitHub secret $key. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
+          sleep $retry_interval
+        else
+          echo "Error: Failed to set GitHub secret $key after $max_retries attempts. Exiting."
+          exit 1
+        fi
+      fi
+    done
+  done
 
   for repo in "${CONTENTREPOS[@]}"; do
     secret_key=$(cat $HOME/.ssh/id_ed25519-$repo)

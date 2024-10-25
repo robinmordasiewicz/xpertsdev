@@ -28,12 +28,12 @@ jobs:
       action: ${{ steps.terraform.outputs.action }}
     steps:
       - id: terraform
-        name: ${{ github.ref_name }} deployed is ${{ vars.DEPLOYED }}
+        name: ${{ github.ref_name }}
         shell: bash
         run: |
-          if [[ -n "${{ vars.DEPLOYED }}" ]]
+          if [[ -n "${{ secrets.DEPLOYED }}" ]]
           then
-            if [[ "${{ vars.DEPLOYED }}" == "true" ]]
+            if [[ "${{ secrets.DEPLOYED }}" == "true" ]]
             then
               echo 'action=build' >> "${GITHUB_OUTPUT}"
             fi
@@ -55,7 +55,6 @@ jobs:
         run: |
           # Check if VERSION file exists
           if [ -f VERSION ]; then
-            echo "VERSION file exists."
             VERSION=$(cat VERSION)
             if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
               echo "VERSION file does not contain a valid semantic version. Exiting."
@@ -68,7 +67,6 @@ jobs:
             echo "VERSION file does not exist. Setting version to 0.0.1."
             NEW_VERSION="0.0.1"
           fi
-          echo "New version: $NEW_VERSION"
           echo "image_version=$NEW_VERSION" >> $GITHUB_ENV
           echo "image_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
@@ -88,10 +86,7 @@ jobs:
 
       - name: Build MkDocs site
         run: |
-          id -u
-          id -g
           docker run --rm -v ${{ github.workspace }}:/docs ghcr.io/amerintlxperts/mkdocs:latest build -c -d site/
-          ls -la site/
 
       - name: Create htaccess password
         run: |

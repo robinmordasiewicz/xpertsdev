@@ -23,8 +23,15 @@ readarray -t CONTENTREPOS < <(jq -r '.REPOS[]' "$INITJSON")
 readarray -t CONTENTREPOSONLY < <(jq -r '.REPOS[]' "$INITJSON")
 CONTENTREPOS+=("$THEME_REPO_NAME")
 CONTENTREPOS+=("$LANDING_PAGE_REPO_NAME")
+readarray -t ALLREPOS < <(jq -r '.REPOS[]' "$INITJSON")
+ALLREPOS+=("$THEME_REPO_NAME")
+ALLREPOS+=("$LANDING_PAGE_REPO_NAME")
+ALLREPOS+=("$DOCS_BUILDER_REPO_NAME")
+ALLREPOS+=("$INFRASTRUCTURE_REPO_NAME")
 
 current_dir=$(pwd)
+max_retries=3
+retry_interval=5
 
 # Check if variables were properly initialized
 if [[ -z "$DEPLOYED" || -z "$PROJECT_NAME" || -z "$LOCATION" || ${#CONTENTREPOS[@]} -eq 0 ]]; then
@@ -34,7 +41,7 @@ fi
 
 # Extract GitHub organization and control repo
 GITHUB_ORG=$(git config --get remote.origin.url | sed -n 's#.*/\([^/]*\)/.*#\1#p')
-INFRASTRUCTURE_REPO_NAME=$(git config --get remote.origin.url | sed -n 's#.*/\([^/]*\)\.git#\1#p')
+#CONTROL_REPO_NAME=$(git config --get remote.origin.url | sed -n 's#.*/\([^/]*\)\.git#\1#p')
 
 if [[ -z "$GITHUB_ORG" ]]; then
   echo "Could not detect GitHub organization. Exiting."
@@ -82,7 +89,7 @@ check_and_create_repos() {
   done
 }
 
-function clone_and_init_repo() {
+copy_dispatch-workflow_to_content_repos() {
   # Use a trap to ensure that temporary directories are cleaned up safely
   TEMP_DIR=$(mktemp -d)
   trap 'rm -rf "$TEMP_DIR"' EXIT
@@ -170,11 +177,7 @@ select_subscription() {
 }
 
 generate_ssh_keys() {
-  local key_path="$HOME/.ssh/id_ed25519"
-  if [ ! -f "$key_path" ]; then
-    ssh-keygen -t ed25519 -N "" -f "$key_path" -q
-  fi
-  for repo in "${CONTENTREPOS[@]}"; do
+  for repo in "${ALLREPOS[@]}"; do
     local key_path="$HOME/.ssh/id_ed25519-$repo"
     if [ ! -f "$key_path" ]; then
       ssh-keygen -t ed25519 -N "" -f "$key_path" -q
@@ -230,28 +233,34 @@ create_service_principal() {
 
 update_HTPASSWD() {
     # Check if the secret HTPASSWD exists
-    if gh secret list | grep -q '^HTPASSWD\s'; then
+    if gh secret list --repo ${GITHUB_ORG}/$DOCS_BUILDER_REPO_NAME | grep -q '^HTPASSWD\s'; then
         echo "The GitHub secret 'HTPASSWD' already exists."
         read -rp "Do you wish to change it? (N/y): " response
         response=${response:-N}
         if [[ "$response" =~ ^[Yy]$ ]]; then
             read -srp "Enter new value for HTPASSWD: " new_htpasswd_value
             echo
-            gh secret set HTPASSWD -b"$new_htpasswd_value" && sleep 10
+            if gh secret set HTPASSWD -b "$new_htpasswd_value" --repo ${GITHUB_ORG}/$DOCS_BUILDER_REPO_NAME; then
+              break
+            else
+              if [[ $attempt -lt $max_retries ]]; then
+                echo "Warning: Failed to set GitHub secret HTPASSWD. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
+                sleep $retry_interval
+              else
+                echo "Error: Failed to set GitHub secret HTPASSWD after $max_retries attempts. Exiting."
+                exit 1
+              fi
+            fi
         fi
     else
         read -srp "Enter value for HTPASSWD: " new_htpasswd_value
         echo
-        gh secret set HTPASSWD -b "$new_htpasswd_value" && sleep 10
+        gh secret set HTPASSWD -b "$new_htpasswd_value" --repo ${GITHUB_ORG}/$DOCS_BUILDER_REPO_NAME
     fi
 }
 
 # Function to create GitHub secrets
-create_github_secrets() {
-  local secret_key
-  local max_retries=3
-  local retry_interval=5
-  secret_key=$(cat $HOME/.ssh/id_ed25519)
+create_infrastructure_secrets() {
 
   for secret in \
     "AZURE_STORAGE_ACCOUNT_NAME:${PROJECT_NAME}account" \
@@ -264,7 +273,6 @@ create_github_secrets() {
     "AZURE_CREDENTIALS:${AZURE_CREDENTIALS}" \
     "ACR_REGISTRY:${PROJECT_NAME}.azurecr.io" \
     "PROJECTNAME:${PROJECT_NAME}" \
-    "THEME_REPO_NAME:${THEME_REPO_NAME}" \
     "LOCATION:${LOCATION}" \
     "PAT:$PAT" \
     "ACR_LOGIN_SERVER:$(tr -cd 'a-z' </dev/urandom | head -c 25)" \
@@ -273,7 +281,7 @@ create_github_secrets() {
     key="${secret%%:*}"
     value="${secret#*:}"
     for ((attempt=1; attempt<=max_retries; attempt++)); do
-      if gh secret set "$key" -b "$value"; then
+      if gh secret set "$key" -b "$value" --repo ${GITHUB_ORG}/$INFRASTRUCTURE_REPO_NAME; then
         break
       else
         if [[ $attempt -lt $max_retries ]]; then
@@ -286,12 +294,16 @@ create_github_secrets() {
       fi
     done
   done
+}
+
+create_docs-builder_secrets() {
+  local secret_key
 
   for repo in "${CONTENTREPOS[@]}"; do
     secret_key=$(cat $HOME/.ssh/id_ed25519-$repo)
     normalized_repo=$(echo "$repo" | tr '-' '_' | tr '[:lower:]' '[:upper:]')
     for ((attempt=1; attempt<=max_retries; attempt++)); do
-      if gh secret set ${normalized_repo}_SSH_PRIVATE_KEY -b "$secret_key"; then
+      if gh secret set ${normalized_repo}_SSH_PRIVATE_KEY -b "$secret_key" --repo ${GITHUB_ORG}/$DOCS_BUILDER_REPO_NAME; then
         break
       else
         if [[ $attempt -lt $max_retries ]]; then
@@ -303,48 +315,38 @@ create_github_secrets() {
         fi
       fi
     done
-    for ((attempt=1; attempt<=max_retries; attempt++)); do
-      if gh secret set PAT -b "$PAT" --repo ${GITHUB_ORG}/$repo ; then
-        break
-      else
-        if [[ $attempt -lt $max_retries ]]; then
-          echo "Warning: Failed to set GitHub secret PAT. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
-          sleep $retry_interval
+  done
+}
+
+# Function to create GitHub secrets
+create_github_secrets() {
+  for repo in "${CONTENTREPOS[@]}"; do
+    for secret in \
+      "PAT:${PAT}" \
+      "DOCS_BUILDER_REPO_NAME:${GITHUB_ORG}/${DOCS_BUILDER_REPO_NAME}";do
+      key="${secret%%:*}"
+      value="${secret#*:}"
+      for ((attempt=1; attempt<=max_retries; attempt++)); do
+        if gh secret set "$key" -b "$value" --repo ${GITHUB_ORG}/$repo; then
+          break
         else
-          echo "Error: Failed to set GitHub secret PAT after $max_retries attempts. Exiting."
-          exit 1
+          if [[ $attempt -lt $max_retries ]]; then
+            echo "Warning: Failed to set GitHub secret $key. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
+            sleep $retry_interval
+          else
+            echo "Error: Failed to set GitHub secret $key after $max_retries attempts. Exiting."
+            exit 1
+          fi
         fi
-      fi
-    done
-    for ((attempt=1; attempt<=max_retries; attempt++)); do
-      if gh secret set DOCS_BUILDER_REPO_NAME -b "${GITHUB_ORG}/${DOCS_BUILDER_REPO_NAME}" --repo ${GITHUB_ORG}/$repo ; then
-        break
-      else
-        if [[ $attempt -lt $max_retries ]]; then
-          echo "Warning: Failed to set GitHub secret DOCS_BUILDER_REPO_NAME. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
-          sleep $retry_interval
-        else
-          echo "Error: Failed to set GitHub secret DOCS_BUILDER_REPO_NAME after $max_retries attempts. Exiting."
-          exit 1
-        fi
-      fi
+      done
     done
   done
 }
 
-# Function to handle deploy keys for repositories
 handle_deploy_keys() {
-
-  deploy_key_id=$(gh repo deploy-key list --json title,id | jq -r '.[] | select(.title == "DEPLOY-KEY") | .id')
-  if [[ -n "$deploy_key_id" ]]; then
-    gh repo deploy-key delete "$deploy_key_id"
-  fi
-  gh repo deploy-key add $HOME/.ssh/id_ed25519.pub --title 'DEPLOY-KEY'
-  for repo in "${CONTENTREPOS[@]}"; do
+  for repo in "${ALLREPOS[@]}"; do
     # Get the deploy key ID if it exists
     deploy_key_id=$(gh repo deploy-key list --repo ${GITHUB_ORG}/$repo --json title,id | jq -r '.[] | select(.title == "DEPLOY-KEY") | .id')
-
-    # Check if the deploy key exists and delete it if necessary
     if [[ -n "$deploy_key_id" ]]; then
       gh repo deploy-key delete --repo ${GITHUB_ORG}/$repo "$deploy_key_id"
     fi
@@ -352,10 +354,28 @@ handle_deploy_keys() {
   done
 }
 
-generate_github_action() {
+copy_docs-builder-workflow_to_docs-builder_repo() {
   local tpl_file="docs-builder.tpl"
+  local github_token="$PAT"
   local output_file=".github/workflows/docs-builder.yml"
   local theme_secret_key_name="$(echo "$THEME_REPO_NAME" | tr '[:lower:]-' '[:upper:]_')_SSH_PRIVATE_KEY"
+
+  # Use a trap to ensure that temporary directories are cleaned up safely
+  TEMP_DIR=$(mktemp -d)
+  trap 'rm -rf "$TEMP_DIR"' EXIT
+
+  # Check if dispatch.yml tpl_file exists before proceeding
+  if [[ ! -f "$tpl_file" ]]; then
+    echo "Error: File $tpl_file not found. Please ensure it is present in the current directory."
+    exit 1
+  fi
+  cd "$TEMP_DIR" || exit 1
+  if ! git clone "https://$github_token@github.com/${GITHUB_ORG}/$repo"; then
+    echo "Error: Failed to clone repository $repo"
+    continue
+  fi
+
+  cd "$repo" || exit 1
   mkdir -p "$(dirname "$output_file")"
 
   # Start building the clone repo commands string
@@ -379,31 +399,23 @@ generate_github_action() {
     clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${repo}.git src/${repo}/docs\n"
   done
 
-  # Properly format and replace the placeholder with the generated clone commands
   echo -e "$clone_commands" | sed -e "/%%INSERTCLONEREPO%%/r /dev/stdin" -e "/%%INSERTCLONEREPO%%/d" "$tpl_file" | awk 'BEGIN { blank=0 } { if (/^$/) { blank++; if (blank <= 1) print; } else { blank=0; print; } }' > "$output_file"
-  git add $output_file && git commit -m "updating docs-builder" && git switch -C docs-builder main && git push && gh pr create --title "Initializing repo" --body "Update docs builder" && gh pr merge -m --delete-branch
-  echo ""
-}
 
-check_and_commit_config() {
-  # Check if config.json has uncommitted changes
-  if git status --porcelain | grep -q "config.json"; then
-    echo "config.json has uncommitted changes. Proceeding with commit."
-    # Stage config.json, commit, switch to a new branch, and push
-    git add config.json && \
-    git commit -m "updating docs-builder" && \
-    git switch -C config main && \
-    git push && \
-    # Create a pull request using GitHub CLI
-    gh pr create --title "Updating config" --body "Update config" && \
-    # Merge the PR and delete the branch
-    gh pr merge -m --delete-branch
+  if [[ -n $(git status --porcelain) ]]; then
+    git add $output_file 
+    if git commit -m "Add or update docs-builder.yml workflow"; then
+      git switch -C docs-builder main && git push && gh pr create --title "Initializing repo" --body "Update docs builder" && gh pr merge -m --delete-branch || echo "Warning: Failed to push changes to $repo"
+    else
+      echo "Warning: No changes to commit for $repo"
+    fi
+  else
+    echo "No changes detected for $repo"
   fi
+  cd "$current_dir" || exit 1
+
 }
 
 # Main execution flow
-
-exit 0
 ensure_azure_login
 ensure_github_login
 prompt_for_PAT
@@ -412,10 +424,10 @@ create_azure_resources
 create_service_principal "$SUBSCRIPTION_ID"
 generate_ssh_keys
 check_and_create_repos
+handle_deploy_keys
+create_infrastructure_secrets
+create_docs-builder_secrets
 update_HTPASSWD
 create_github_secrets
-clone_and_init_repo
-handle_deploy_keys
-check_and_commit_config
-generate_github_action
-gh workflow run docs-builder
+copy_dispatch-workflow_to_content_repos
+copy_docs-builder-workflow_to_docs-builder_repo

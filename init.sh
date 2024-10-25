@@ -18,6 +18,7 @@ LOCATION=$(jq -r '.LOCATION' "$INITJSON")
 THEME_REPO_NAME=$(jq -r '.THEME_REPO_NAME' "$INITJSON")
 LANDING_PAGE_REPO_NAME=$(jq -r '.LANDING_PAGE_REPO_NAME' "$INITJSON")
 DOCS_BUILDER_REPO_NAME=$(jq -r '.DOCS_BUILDER_REPO_NAME' "$INITJSON")
+INFRASTRUCTURE_REPO_NAME=$(jq -r '.INFRASTRUCTURE_REPO_NAME' "$INITJSON")
 readarray -t CONTENTREPOS < <(jq -r '.REPOS[]' "$INITJSON")
 readarray -t CONTENTREPOSONLY < <(jq -r '.REPOS[]' "$INITJSON")
 CONTENTREPOS+=("$THEME_REPO_NAME")
@@ -267,7 +268,7 @@ create_github_secrets() {
     "LOCATION:${LOCATION}" \
     "PAT:$PAT" \
     "ACR_LOGIN_SERVER:$(tr -cd 'a-z' </dev/urandom | head -c 25)" \
-    "INFRASTRUCTURE_REPO_NAME_SSH_PRIVATE_KEY:$(cat $HOME/.ssh/id_ed25519)" \
+    "SSH_PRIVATE_KEY:$(cat $HOME/.ssh/id_ed25519-infrastructure)" \
     "DEPLOYED:$DEPLOYED"; do
     key="${secret%%:*}"
     value="${secret#*:}"

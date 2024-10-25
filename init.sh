@@ -403,12 +403,12 @@ copy_docs-builder-workflow_to_docs-builder_repo() {
 
   # Start building the clone repo commands string
   local clone_commands=""
-
+  local landing_page_secret_key_name="$(echo "${LANDING_PAGE_REPO_NAME}" | tr '[:lower:]-' '[:upper:]_')_SSH_PRIVATE_KEY"
   clone_commands+="      - name: Clone Landing Page\n"
   clone_commands+="        shell: bash\n"
   clone_commands+="        run: |\n"
   clone_commands+="          if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi\n"
-  clone_commands+="          echo '\${{ secrets.${landing-page_secret_key_name}}}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519\n"
+  clone_commands+="          echo '\${{ secrets.${landing_page_secret_key_name}}}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519\n"
   clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${LANDING_PAGE_REPO_NAME}.git docs\n\n"
 
   clone_commands+="      - name: Link mkdocs.yml\n"
@@ -416,6 +416,7 @@ copy_docs-builder-workflow_to_docs-builder_repo() {
   clone_commands+="        run: |\n"
   clone_commands+="          echo 'INHERIT: docs/theme/mkdocs.yml' > mkdocs.yml\n\n"
 
+  local theme_secret_key_name="$(echo "${THEME_REPO_NAME}" | tr '[:lower:]-' '[:upper:]_')_SSH_PRIVATE_KEY"
   clone_commands+="      - name: Clone Theme\n"
   clone_commands+="        shell: bash\n"
   clone_commands+="        run: |\n"

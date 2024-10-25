@@ -47,6 +47,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: [init]
     steps:
+
+      - name: Microsoft Azure Authentication
+        uses: azure/login@a65d910e8af852a8061c627c456678983e180302
+        with:
+          allow-no-subscriptions: true
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+  
+      - name: ACR login
+        uses: azure/docker-login@15c4aadf093404726ab2ff205b2cdd33fa6d054c
+        with:
+          login-server: "${{ secrets.ACR_LOGIN_SERVER }}.azurecr.io"
+          username: ${{ secrets.ARM_CLIENT_ID }}
+          password: ${{ secrets.ARM_CLIENT_SECRET }}
+
       - name: Github repository checkout
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871
  
@@ -90,22 +104,7 @@ jobs:
 
       - name: Create htaccess password
         run: |
-          pwd
           htpasswd -b -c .htpasswd ${{ secrets.PROJECTNAME }} ${{ secrets.HTPASSWD }}
-          ls -la
-  
-      - name: Microsoft Azure Authentication
-        uses: azure/login@a65d910e8af852a8061c627c456678983e180302
-        with:
-          allow-no-subscriptions: true
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-  
-      - name: ACR login
-        uses: azure/docker-login@15c4aadf093404726ab2ff205b2cdd33fa6d054c
-        with:
-          login-server: "${{ secrets.ACR_LOGIN_SERVER }}.azurecr.io"
-          username: ${{ secrets.ARM_CLIENT_ID }}
-          password: ${{ secrets.ARM_CLIENT_SECRET }}
   
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349
@@ -115,7 +114,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.ACR_LOGIN_SERVER }}.azurecr.io/docs:${{ env.image_version }},${{ secrets.ACR_LOGIN_SERVER }}.azurecr.io/docs:latest
+          tags: ${{ secrets.ACR_LOGIN_SERVER }}/docs:${{ env.image_version }},${{ secrets.ACR_LOGIN_SERVER }}/docs:latest
 
       - name: Configure Git
         run: |
@@ -153,5 +152,3 @@ jobs:
           token: ${{ secrets.PAT }}
           pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
           merge-method: squash
-        
-  

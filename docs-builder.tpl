@@ -114,7 +114,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.ACR_LOGIN_SERVER }}.azurecr.io/docs:${{ env.image_version }},${{ secrets.ACR_LOGIN_SERVER }}.azurecr.io/docs:latest
+          tags: ${{ secrets.ACR_LOGIN_SERVER }}/docs:${{ env.image_version }},${{ secrets.ACR_LOGIN_SERVER }}/docs:latest
 
       - name: Configure Git
         run: |

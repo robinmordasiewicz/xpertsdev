@@ -370,12 +370,12 @@ copy_docs-builder-workflow_to_docs-builder_repo() {
     exit 1
   fi
   cd "$TEMP_DIR" || exit 1
-  if ! git clone "https://$github_token@github.com/${GITHUB_ORG}/$repo"; then
-    echo "Error: Failed to clone repository $repo"
+  if ! git clone "https://$github_token@github.com/${GITHUB_ORG}/$DOCS_BUILDER_REPO_NAME"; then
+    echo "Error: Failed to clone repository $DOCS_BUILDER_REPO_NAME"
     continue
   fi
 
-  cd "$repo" || exit 1
+  cd "$DOCS_BUILDER_REPO_NAME" || exit 1
   mkdir -p "$(dirname "$output_file")"
 
   # Start building the clone repo commands string

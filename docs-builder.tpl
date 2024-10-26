@@ -100,7 +100,7 @@ jobs:
 
       - name: Build MkDocs site
         run: |
-          docker run --rm -v ${{ github.workspace }}:/docs ghcr.io/amerintlxperts/mkdocs:latest build -c -d site/
+          docker run --rm -v ${{ github.workspace }}:/docs ${{ secrets.MKDOCS_CONTAINER }} build -c -d site/
 
       - name: Create htaccess password
         run: |
@@ -152,3 +152,18 @@ jobs:
           token: ${{ secrets.PAT }}
           pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
           merge-method: squash
+
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0
+        with:
+          token: ${{ secrets.PAT }}
+          repository: ${{ github.repository_owner }}/${{ secrets.MANIFESTS_REPO_NAME }}
+          event-type: update-image
+          client-payload: |-
+            {
+              "update-image": {
+                "type": "applications"
+                "file": "Deployment.yaml",
+                "image": "${{ secrets.ACR_LOGIN_SERVER }}/docs:${{ env.image_version }}",
+              }
+            }

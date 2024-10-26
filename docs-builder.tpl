@@ -114,6 +114,11 @@ jobs:
   
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349
+      
+      - name: Copy Workdir to TEMP_DIR
+        run: |
+          cp -a $GITHUB_WORKSPACE/* $TEMP_DIR/
+          echo "# ${{ env.image_version }}" > $TEMP_DIR/docs/version.md
   
       - name: Build and Push Docker Image
         uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75

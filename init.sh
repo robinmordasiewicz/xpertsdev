@@ -372,7 +372,6 @@ create_github_secrets() {
 
 handle_deploy_keys() {
   for repo in "${ALLREPOS[@]}"; do
-    # Get the deploy key ID if it exists
     deploy_key_id=$(gh repo deploy-key list --repo ${GITHUB_ORG}/$repo --json title,id | jq -r '.[] | select(.title == "DEPLOY-KEY") | .id')
     if [[ -n "$deploy_key_id" ]]; then
       gh repo deploy-key delete --repo ${GITHUB_ORG}/$repo "$deploy_key_id"

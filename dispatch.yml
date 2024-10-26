@@ -2,6 +2,7 @@ name: dispatch
 
 concurrency:
   group: ${{ github.workflow }}
+  cancel-in-progress: true
 
 permissions:
   id-token: write

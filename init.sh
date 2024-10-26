@@ -46,6 +46,7 @@ fi
 # Extract GitHub organization and control repo
 GITHUB_ORG=$(git config --get remote.origin.url | sed -n 's#.*/\([^/]*\)/.*#\1#p')
 PROJECT_NAME="${GITHUB_ORG}${PROJECT_NAME}"
+AZURE_STORAGE_ACCOUNT_NAME=$(echo "{$PROJECT_NAME}account" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z' | cut -c 1-24)
 if [[ "$MKDOCS_CONTAINER" != */* ]]; then
   MKDOCS_CONTAINER="ghcr.io/${GITHUB_ORG}/${MKDOCS_CONTAINER}"
 fi
@@ -203,13 +204,13 @@ create_azure_resources() {
   fi
 
   # Check if storage account exists
-  if ! az storage account show -n "${PROJECT_NAME}account" -g "${PROJECT_NAME}-tfstate-RG" &>/dev/null; then
-    az storage account create -n "${PROJECT_NAME}account" -g "${PROJECT_NAME}-tfstate-RG" -l "${LOCATION}" --sku Standard_LRS
+  if ! az storage account show -n "${AZURE_STORAGE_ACCOUNT_NAME}" -g "${PROJECT_NAME}-tfstate-RG" &>/dev/null; then
+    az storage account create -n "${AZURE_STORAGE_ACCOUNT_NAME}" -g "${PROJECT_NAME}-tfstate-RG" -l "${LOCATION}" --sku Standard_LRS
   fi
 
   # Check if storage container exists
-  if ! az storage container show -n "${PROJECT_NAME}tfstate" --account-name "${PROJECT_NAME}account" &>/dev/null; then
-    az storage container create -n "${PROJECT_NAME}tfstate" --account-name "${PROJECT_NAME}account" --auth-mode login
+  if ! az storage container show -n "${PROJECT_NAME}tfstate" --account-name "${AZURE_STORAGE_ACCOUNT_NAME}" &>/dev/null; then
+    az storage container create -n "${PROJECT_NAME}tfstate" --account-name "${AZURE_STORAGE_ACCOUNT_NAME}" --auth-mode login
   fi
 }
 
@@ -274,7 +275,7 @@ update_HTPASSWD() {
 create_infrastructure_secrets() {
 
   for secret in \
-    "AZURE_STORAGE_ACCOUNT_NAME:${PROJECT_NAME}account" \
+    "AZURE_STORAGE_ACCOUNT_NAME:${AZURE_STORAGE_ACCOUNT_NAME}" \
     "TFSTATE_CONTAINER_NAME:${PROJECT_NAME}tfstate" \
     "AZURE_RESOURCE_GROUP_NAME:${PROJECT_NAME}-tfstate-RG" \
     "ARM_SUBSCRIPTION_ID:${subscriptionId}" \

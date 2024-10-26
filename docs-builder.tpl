@@ -96,15 +96,21 @@ jobs:
             StrictHostKeyChecking no
           EOF
 
+      - name: Create Temporary Directory
+        id: create-temp-dir
+        run: |
+          TEMP_DIR=$(mktemp -d)
+          echo "TEMP_DIR=$TEMP_DIR" >> $GITHUB_ENV
+
       %%INSERTCLONEREPO%%
 
       - name: Build MkDocs site
         run: |
-          docker run --rm -v ${{ github.workspace }}:/docs ${{ secrets.MKDOCS_CONTAINER }} build -c -d site/
+          docker run --rm -v $TEMP_DIR:/docs ${{ secrets.MKDOCS_CONTAINER }} build -c -d site/
 
       - name: Create htaccess password
         run: |
-          htpasswd -b -c .htpasswd ${{ secrets.PROJECTNAME }} ${{ secrets.HTPASSWD }}
+          htpasswd -b -c $TEMP_DIR/.htpasswd ${{ secrets.PROJECTNAME }} ${{ secrets.HTPASSWD }}
   
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349
@@ -112,7 +118,7 @@ jobs:
       - name: Build and Push Docker Image
         uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75
         with:
-          context: .
+          context: $TEMP_DIR
           push: true
           tags: ${{ secrets.ACR_LOGIN_SERVER }}/docs:${{ env.image_version }},${{ secrets.ACR_LOGIN_SERVER }}/docs:latest
 

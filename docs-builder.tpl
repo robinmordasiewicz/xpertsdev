@@ -104,6 +104,10 @@ jobs:
 
       %%INSERTCLONEREPO%%
 
+      - name: Create version.md
+        run: |
+          echo "# ${{ env.image_version }}" > $TEMP_DIR/docs/version.md
+
       - name: Build MkDocs site
         run: |
           docker run --rm -v $TEMP_DIR:/docs ${{ secrets.MKDOCS_CONTAINER }} build -c -d site/
@@ -118,12 +122,11 @@ jobs:
       - name: Copy Workdir to TEMP_DIR
         run: |
           cp -a $GITHUB_WORKSPACE/* $TEMP_DIR/
-          echo "# ${{ env.image_version }}" > $TEMP_DIR/docs/version.md
   
       - name: Build and Push Docker Image
         uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75
         with:
-          context: $TEMP_DIR
+          context: ${{ env.TEMP_DIR }}
           push: true
           tags: ${{ secrets.ACR_LOGIN_SERVER }}/docs:${{ env.image_version }},${{ secrets.ACR_LOGIN_SERVER }}/docs:latest
 

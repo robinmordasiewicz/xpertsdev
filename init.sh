@@ -46,7 +46,7 @@ fi
 # Extract GitHub organization and control repo
 GITHUB_ORG=$(git config --get remote.origin.url | sed -n 's#.*/\([^/]*\)/.*#\1#p')
 if [[ "$MKDOCS_CONTAINER" != */* ]]; then
-  MKDOCS_CONTAINER="${GITHUB_ORG}/${MKDOCS_CONTAINER}"
+  MKDOCS_CONTAINER="ghcr.io/${GITHUB_ORG}/${MKDOCS_CONTAINER}"
 fi
 if [[ "$MKDOCS_CONTAINER" != *:* ]]; then
   MKDOCS_CONTAINER="${MKDOCS_CONTAINER}:latest"

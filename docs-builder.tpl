@@ -158,12 +158,14 @@ jobs:
         with:
           token: ${{ secrets.PAT }}
           repository: ${{ github.repository_owner }}/${{ secrets.MANIFESTS_REPO_NAME }}
-          event-type: update-image
+          event-type: update-manifest
           client-payload: |-
             {
-              "update-image": {
-                "type": "applications"
+              "update-manifest": {
+                "type": "applications",
+                "name": "docs",
                 "file": "Deployment.yaml",
-                "image": "${{ secrets.ACR_LOGIN_SERVER }}/docs:${{ env.image_version }}",
+                "spec": ".spec.template.spec.containers[0].image",
+                "value": "${{ secrets.ACR_LOGIN_SERVER }}/docs:${{ env.image_version }}",
               }
             }

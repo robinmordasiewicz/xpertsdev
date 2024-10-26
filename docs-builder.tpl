@@ -177,6 +177,6 @@ jobs:
                 "name": "docs",
                 "file": "Deployment.yaml",
                 "spec": ".spec.template.spec.containers[0].image",
-                "value": "${{ secrets.ACR_LOGIN_SERVER }}/docs:${{ env.image_version }}",
+                "value": "${{ secrets.ACR_LOGIN_SERVER }}/docs:${{ env.image_version }}"
               }
             }

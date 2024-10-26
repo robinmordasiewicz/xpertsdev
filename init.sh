@@ -21,12 +21,7 @@ DOCS_BUILDER_REPO_NAME=$(jq -r '.DOCS_BUILDER_REPO_NAME' "$INITJSON")
 INFRASTRUCTURE_REPO_NAME=$(jq -r '.INFRASTRUCTURE_REPO_NAME' "$INITJSON")
 MANIFESTS_REPO_NAME=$(jq -r '.MANIFESTS_REPO_NAME' "$INITJSON")
 MKDOCS_CONTAINER=$(jq -r '.MKDOCS_CONTAINER' "$INITJSON")
-if [[ "$MKDOCS_CONTAINER" != */* ]]; then
-  MKDOCS_CONTAINER="${{ github.repository_owner }}/${MKDOCS_CONTAINER}"
-fi
-if [[ "$MKDOCS_CONTAINER" != *:* ]]; then
-  MKDOCS_CONTAINER="${MKDOCS_CONTAINER}:latest"
-fi
+
 readarray -t CONTENTREPOS < <(jq -r '.REPOS[]' "$INITJSON")
 readarray -t CONTENTREPOSONLY < <(jq -r '.REPOS[]' "$INITJSON")
 CONTENTREPOS+=("$THEME_REPO_NAME")
@@ -50,6 +45,12 @@ fi
 
 # Extract GitHub organization and control repo
 GITHUB_ORG=$(git config --get remote.origin.url | sed -n 's#.*/\([^/]*\)/.*#\1#p')
+if [[ "$MKDOCS_CONTAINER" != */* ]]; then
+  MKDOCS_CONTAINER="${GITHUB_ORG}/${MKDOCS_CONTAINER}"
+fi
+if [[ "$MKDOCS_CONTAINER" != *:* ]]; then
+  MKDOCS_CONTAINER="${MKDOCS_CONTAINER}:latest"
+fi
 #CONTROL_REPO_NAME=$(git config --get remote.origin.url | sed -n 's#.*/\([^/]*\)\.git#\1#p')
 
 if [[ -z "$GITHUB_ORG" ]]; then

@@ -172,11 +172,9 @@ jobs:
           event-type: update-manifest
           client-payload: |-
             {
-              "update-manifest": {
-                "type": "applications",
-                "name": "docs",
-                "file": "Deployment.yaml",
-                "spec": ".spec.template.spec.containers[0].image",
-                "value": "${{ secrets.ACR_LOGIN_SERVER }}/docs:${{ env.image_version }}"
-              }
+              "type": "applications",
+              "name": "docs",
+              "file": "Deployment.yaml",
+              "spec": ".spec.template.spec.containers[0].image",
+              "value": "${{ secrets.ACR_LOGIN_SERVER }}/docs:${{ env.image_version }}"
             }

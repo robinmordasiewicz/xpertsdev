@@ -356,27 +356,36 @@ create_docs-builder_secrets() {
   done
 }
 
-# Function to create GitHub secrets
-create_github_secrets() {
-  for repo in "${CONTENTREPOS[@]}"; do
-    for secret in \
-      "PAT:${PAT}" \
-      "DOCS_BUILDER_REPO_NAME:${GITHUB_ORG}/${DOCS_BUILDER_REPO_NAME}";do
-      key="${secret%%:*}"
-      value="${secret#*:}"
-      for ((attempt=1; attempt<=max_retries; attempt++)); do
-        if gh secret set "$key" -b "$value" --repo ${GITHUB_ORG}/$repo; then
-          break
+create_manifests_secrets() {
+    for ((attempt=1; attempt<=max_retries; attempt++)); do
+      if gh secret set "PAT" -b "${PAT}" --repo ${GITHUB_ORG}/${MANIFESTS_REPO_NAME}; then
+        break
+      else
+        if [[ $attempt -lt $max_retries ]]; then
+          echo "Warning: Failed to set GitHub secret PAT. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
+          sleep $retry_interval
         else
-          if [[ $attempt -lt $max_retries ]]; then
-            echo "Warning: Failed to set GitHub secret $key. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
-            sleep $retry_interval
-          else
-            echo "Error: Failed to set GitHub secret $key after $max_retries attempts. Exiting."
-            exit 1
-          fi
+          echo "Error: Failed to set GitHub secret PAT after $max_retries attempts. Exiting."
+          exit 1
         fi
-      done
+      fi
+    done
+}
+
+create_content-repo_secrets() {
+  for repo in "${CONTENTREPOS[@]}"; do
+    for ((attempt=1; attempt<=max_retries; attempt++)); do
+      if gh secret set "DOCS_BUILDER_REPO_NAME" -b "${GITHUB_ORG}/${DOCS_BUILDER_REPO_NAME}" --repo ${GITHUB_ORG}/$repo; then
+        break
+      else
+        if [[ $attempt -lt $max_retries ]]; then
+          echo "Warning: Failed to set GitHub secret DOCS_BUILDER_REPO_NAME. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
+          sleep $retry_interval
+        else
+          echo "Error: Failed to set GitHub secret DOCS_BUILDER_REPO_NAME after $max_retries attempts. Exiting."
+          exit 1
+        fi
+      fi
     done
   done
 }
@@ -475,9 +484,10 @@ create_service_principal "$SUBSCRIPTION_ID"
 generate_ssh_keys
 check_and_create_repos
 handle_deploy_keys
+update_HTPASSWD
 create_docs-builder_secrets
+create_manifests_secrets
 copy_docs-builder-workflow_to_docs-builder_repo
 create_infrastructure_secrets
-update_HTPASSWD
-create_github_secrets
+create_content-repo_secrets
 copy_dispatch-workflow_to_content_repos

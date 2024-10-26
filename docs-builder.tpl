@@ -2,7 +2,7 @@ name: "docs-builder"
 
 on:
   repository_dispatch:
-    types: [docs]
+    types: [docs-builder]
   workflow_dispatch:
   push:
     paths:
@@ -129,9 +129,6 @@ jobs:
       - name: Update VERSION file
         run: |
           echo "${{ env.image_version }}" > VERSION
-          rm -rf docs/theme/
-          rm -rf src/
-          rm .htpasswd
    
       - name: Create Pull Request
         id: create_pr

@@ -237,14 +237,13 @@ create_service_principal() {
   fi
 }
 
-update_HTPASSWD() {
+update_DOCS_HTPASSWD() {
     # Check if the secret HTPASSWD exists
     if gh secret list --repo ${GITHUB_ORG}/$DOCS_BUILDER_REPO_NAME | grep -q '^HTPASSWD\s'; then
-        echo "The GitHub secret 'HTPASSWD' already exists."
-        read -rp "Do you wish to change it? (N/y): " response
+        read -rp "Change the Docs HTPASSWD? (N/y): " response
         response=${response:-N}
         if [[ "$response" =~ ^[Yy]$ ]]; then
-            read -srp "Enter new value for HTPASSWD: " new_htpasswd_value
+            read -srp "Enter new value for Docs HTPASSWD: " new_htpasswd_value
             echo
             if gh secret set HTPASSWD -b "$new_htpasswd_value" --repo ${GITHUB_ORG}/$DOCS_BUILDER_REPO_NAME; then
               break
@@ -259,9 +258,77 @@ update_HTPASSWD() {
             fi
         fi
     else
-        read -srp "Enter value for HTPASSWD: " new_htpasswd_value
+        read -srp "Enter value for Docs HTPASSWD: " new_htpasswd_value
         echo
-        gh secret set HTPASSWD -b "$new_htpasswd_value" --repo ${GITHUB_ORG}/$DOCS_BUILDER_REPO_NAME
+        if gh secret set HTPASSWD -b "$new_htpasswd_value" --repo ${GITHUB_ORG}/$DOCS_BUILDER_REPO_NAME; then
+          break
+        else
+          if [[ $attempt -lt $max_retries ]]; then
+            echo "Warning: Failed to set GitHub secret HTPASSWD. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
+            sleep $retry_interval
+          else
+            echo "Error: Failed to set GitHub secret HTPASSWD after $max_retries attempts. Exiting."
+            exit 1
+          fi
+        fi
+    fi
+}
+
+update_HUB_NVA_CREDENTIALS() {
+    if gh secret list --repo ${GITHUB_ORG}/$INFRASTRUCTURE_REPO_NAME | grep -q '^HUB_NVA_PASSWORD\s'; then
+        read -rp "Change the Hub NVA Password? (N/y): " response
+        response=${response:-N}
+        if [[ "$response" =~ ^[Yy]$ ]]; then
+            read -srp "Enter new password for the HUB NVA: " new_htpasswd_value
+            echo
+            if gh secret set HUB_NVA_PASSWORD -b "$new_htpasswd_value" --repo ${GITHUB_ORG}/$INFRASTRUCTURE_REPO_NAME; then
+              break
+            else
+              if [[ $attempt -lt $max_retries ]]; then
+                echo "Warning: Failed to set GitHub secret HUB_NVA_PASSWORD. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
+                sleep $retry_interval
+              else
+                echo "Error: Failed to set GitHub secret HUB_NVA_PASSWORD after $max_retries attempts. Exiting."
+                exit 1
+              fi
+            fi
+            if gh secret set HUB_NVA_USERNAME -b "${GITHUB_ORG}" --repo ${GITHUB_ORG}/$INFRASTRUCTURE_REPO_NAME; then
+              break
+            else
+              if [[ $attempt -lt $max_retries ]]; then
+                echo "Warning: Failed to set GitHub secret HUB_NVA_USERNAME. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
+                sleep $retry_interval
+              else
+                echo "Error: Failed to set GitHub secret HUB_NVA_USERNAME after $max_retries attempts. Exiting."
+                exit 1
+              fi
+            fi
+        fi
+    else
+        read -srp "Enter value for Hub NVA Password: " new_htpasswd_value
+        echo
+        if gh secret set HUB_NVA_PASSWORD -b "$new_htpasswd_value" --repo ${GITHUB_ORG}/$INFRASTRUCTURE_REPO_NAME; then
+          break
+        else
+          if [[ $attempt -lt $max_retries ]]; then
+            echo "Warning: Failed to set GitHub secret HUB_NVA_PASSWORD. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
+            sleep $retry_interval
+          else
+            echo "Error: Failed to set GitHub secret HUB_NVA_PASSWORD after $max_retries attempts. Exiting."
+            exit 1
+          fi
+        fi
+        if gh secret set HUB_NVA_USERNAME -b "${GITHUB_ORG}"  --repo ${GITHUB_ORG}/$INFRASTRUCTURE_REPO_NAME; then
+          break
+        else
+          if [[ $attempt -lt $max_retries ]]; then
+            echo "Warning: Failed to set GitHub secret HUB_NVA_USERNAME. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
+            sleep $retry_interval
+          else
+            echo "Error: Failed to set GitHub secret HUB_NVA_USERNAME after $max_retries attempts. Exiting."
+            exit 1
+          fi
+        fi
     fi
 }
 
@@ -478,10 +545,11 @@ create_service_principal "$SUBSCRIPTION_ID"
 generate_ssh_keys
 check_and_create_repos
 handle_deploy_keys
-update_HTPASSWD
+update_DOCS_HTPASSWD
 create_docs-builder_secrets
 create_manifests_secrets
 copy_docs-builder-workflow_to_docs-builder_repo
+update_HUB_NVA_CREDENTIALS
 create_infrastructure_secrets
 create_content-repo_secrets
 copy_dispatch-workflow_to_content_repos

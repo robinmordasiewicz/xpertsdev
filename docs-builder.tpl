@@ -114,7 +114,7 @@ jobs:
 
       - name: Create htaccess password
         run: |
-          htpasswd -b -c $TEMP_DIR/.htpasswd ${{ secrets.PROJECTNAME }} ${{ secrets.HTPASSWD }}
+          htpasswd -b -c $TEMP_DIR/.htpasswd ${{ secrets.PROJECT_NAME }} ${{ secrets.HTPASSWD }}
   
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349

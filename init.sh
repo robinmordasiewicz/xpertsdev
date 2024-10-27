@@ -283,7 +283,7 @@ create_infrastructure_secrets() {
     "ARM_CLIENT_ID:${clientId}" \
     "ARM_CLIENT_SECRET:${clientSecret}" \
     "AZURE_CREDENTIALS:${AZURE_CREDENTIALS}" \
-    "PROJECTNAME:${PROJECT_NAME}" \
+    "PROJECT_NAME:${PROJECT_NAME}" \
     "LOCATION:${LOCATION}" \
     "PAT:$PAT" \
     "DOCS_BUILDER_REPO_NAME:$DOCS_BUILDER_REPO_NAME" \
@@ -312,7 +312,7 @@ create_docs-builder_secrets() {
   local secret_key
 
   for secret in \
-    "PROJECTNAME:${PROJECT_NAME}" \
+    "PROJECT_NAME:${PROJECT_NAME}" \
     "AZURE_CREDENTIALS:${AZURE_CREDENTIALS}" \
     "ARM_CLIENT_ID:${clientId}" \
     "ARM_CLIENT_SECRET:${clientSecret}" \

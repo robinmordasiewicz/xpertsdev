@@ -7,7 +7,7 @@
   "DOCS_BUILDER_REPO_NAME": "docs-builder",
   "INFRASTRUCTURE_REPO_NAME": "infrastructure",
   "MANIFESTS_REPO_NAME": "manifests",
-  "MKDOCS_CONTAINER": "mkdocs",
+  "MKDOCS_REPO_NAME": "mkdocs",
   "DEPLOYED": "true",
   "PROJECT_NAME": "xpertsdev",
   "LOCATION": "eastus"

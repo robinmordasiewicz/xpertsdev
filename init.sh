@@ -80,20 +80,13 @@ repo_exists() {
   gh repo view "${GITHUB_ORG}/${repo}" &>/dev/null
 }
 
-# Function to create a GitHub repository
-create_github_repo() {
-  local repo=$1
-  gh repo create "${GITHUB_ORG}/${repo}" --private
-}
-
-# Function to check and create repositories if needed
 check_and_create_repos() {
   for repo in "${CONTENTREPOS[@]}"; do
     if ! repo_exists "$repo"; then
-      read -rp "Create repository '$repo' in organization '$GITHUB_ORG'? (y/n)" create_repo
+      read -rp "Create repository '$repo' in organization '$GITHUB_ORG'? (Y/n)" create_repo
       create_repo=${create_repo:-Y}
       if [[ "$create_repo" =~ ^[Yy]$ ]]; then
-        create_github_repo "$repo"
+        gh repo create "${GITHUB_ORG}/${repo}" --private
       else
         echo "Repository creation aborted. Exiting."
         exit 1

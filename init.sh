@@ -20,7 +20,7 @@ LANDING_PAGE_REPO_NAME=$(jq -r '.LANDING_PAGE_REPO_NAME' "$INITJSON")
 DOCS_BUILDER_REPO_NAME=$(jq -r '.DOCS_BUILDER_REPO_NAME' "$INITJSON")
 INFRASTRUCTURE_REPO_NAME=$(jq -r '.INFRASTRUCTURE_REPO_NAME' "$INITJSON")
 MANIFESTS_REPO_NAME=$(jq -r '.MANIFESTS_REPO_NAME' "$INITJSON")
-MKDOCS_CONTAINER=$(jq -r '.MKDOCS_CONTAINER' "$INITJSON")
+MKDOCS_REPO_NAME=$(jq -r '.MKDOCS_REPO_NAME' "$INITJSON")
 
 readarray -t CONTENTREPOS < <(jq -r '.REPOS[]' "$INITJSON")
 readarray -t CONTENTREPOSONLY < <(jq -r '.REPOS[]' "$INITJSON")
@@ -47,11 +47,11 @@ fi
 GITHUB_ORG=$(git config --get remote.origin.url | sed -n 's#.*/\([^/]*\)/.*#\1#p')
 PROJECT_NAME="${GITHUB_ORG}-${PROJECT_NAME}"
 AZURE_STORAGE_ACCOUNT_NAME=$(echo "{$PROJECT_NAME}account" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z' | cut -c 1-24)
-if [[ "$MKDOCS_CONTAINER" != */* ]]; then
-  MKDOCS_CONTAINER="ghcr.io/${GITHUB_ORG}/${MKDOCS_CONTAINER}"
+if [[ "$MKDOCS_REPO_NAME" != */* ]]; then
+  MKDOCS_REPO_NAME="ghcr.io/${GITHUB_ORG}/${MKDOCS_REPO_NAME}"
 fi
-if [[ "$MKDOCS_CONTAINER" != *:* ]]; then
-  MKDOCS_CONTAINER="${MKDOCS_CONTAINER}:latest"
+if [[ "$MKDOCS_REPO_NAME" != *:* ]]; then
+  MKDOCS_REPO_NAME="${MKDOCS_REPO_NAME}:latest"
 fi
 #CONTROL_REPO_NAME=$(git config --get remote.origin.url | sed -n 's#.*/\([^/]*\)\.git#\1#p')
 
@@ -287,7 +287,7 @@ create_infrastructure_secrets() {
     "LOCATION:${LOCATION}" \
     "PAT:$PAT" \
     "DOCS_BUILDER_REPO_NAME:${GITHUB_ORG}/$DOCS_BUILDER_REPO_NAME" \
-    "SSH_PRIVATE_KEY:$(cat $HOME/.ssh/id_ed25519-manifests)" \
+    "MANIFESTS_SSH_PRIVATE_KEY:$(cat $HOME/.ssh/id_ed25519-manifests)" \
     "MANIFESTS_REPO_NAME:${GITHUB_ORG}/${MANIFESTS_REPO_NAME}" \
     "DEPLOYED:$DEPLOYED"; do
     key="${secret%%:*}"
@@ -317,7 +317,7 @@ create_docs-builder_secrets() {
     "ARM_CLIENT_ID:${clientId}" \
     "ARM_CLIENT_SECRET:${clientSecret}" \
     "DEPLOYED:$DEPLOYED" \
-    "MKDOCS_CONTAINER:$MKDOCS_CONTAINER" \
+    "MKDOCS_REPO_NAME:$MKDOCS_REPO_NAME" \
     "MANIFESTS_REPO_NAME:$MANIFESTS_REPO_NAME" \
     "PAT:$PAT"; do
     key="${secret%%:*}"
@@ -376,6 +376,7 @@ create_content-repo_secrets() {
   for repo in "${CONTENTREPOS[@]}"; do
     for ((attempt=1; attempt<=max_retries; attempt++)); do
       if gh secret set "DOCS_BUILDER_REPO_NAME" -b "${GITHUB_ORG}/${DOCS_BUILDER_REPO_NAME}" --repo ${GITHUB_ORG}/$repo; then
+        echo "${GITHUB_ORG}/$DOCS_BUILDER_REPO_NAME"
         break
       else
         if [[ $attempt -lt $max_retries ]]; then

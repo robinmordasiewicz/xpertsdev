@@ -91,6 +91,7 @@ check_and_create_repos() {
   for repo in "${CONTENTREPOS[@]}"; do
     if ! repo_exists "$repo"; then
       read -rp "Create repository '$repo' in organization '$GITHUB_ORG'? (y/n)" create_repo
+      create_repo=${create_repo:-Y}
       if [[ "$create_repo" =~ ^[Yy]$ ]]; then
         create_github_repo "$repo"
       else

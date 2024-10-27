@@ -199,13 +199,13 @@ generate_ssh_keys() {
 
 create_azure_resources() {
   # Check if resource group exists
-  if ! az group show -n "${PROJECT_NAME}-tfstate-RG" &>/dev/null; then
-    az group create -n "${PROJECT_NAME}-tfstate-RG" -l "${LOCATION}"
+  if ! az group show -n "${PROJECT_NAME}-tfstate" &>/dev/null; then
+    az group create -n "${PROJECT_NAME}-tfstate" -l "${LOCATION}"
   fi
 
   # Check if storage account exists
-  if ! az storage account show -n "${AZURE_STORAGE_ACCOUNT_NAME}" -g "${PROJECT_NAME}-tfstate-RG" &>/dev/null; then
-    az storage account create -n "${AZURE_STORAGE_ACCOUNT_NAME}" -g "${PROJECT_NAME}-tfstate-RG" -l "${LOCATION}" --sku Standard_LRS
+  if ! az storage account show -n "${AZURE_STORAGE_ACCOUNT_NAME}" -g "${PROJECT_NAME}-tfstate" &>/dev/null; then
+    az storage account create -n "${AZURE_STORAGE_ACCOUNT_NAME}" -g "${PROJECT_NAME}-tfstate" -l "${LOCATION}" --sku Standard_LRS
   fi
 
   # Check if storage container exists
@@ -277,7 +277,7 @@ create_infrastructure_secrets() {
   for secret in \
     "AZURE_STORAGE_ACCOUNT_NAME:${AZURE_STORAGE_ACCOUNT_NAME}" \
     "TFSTATE_CONTAINER_NAME:${PROJECT_NAME}tfstate" \
-    "AZURE_RESOURCE_GROUP_NAME:${PROJECT_NAME}-tfstate-RG" \
+    "AZURE_TFSTATE_RESOURCE_GROUP_NAME:${PROJECT_NAME}-tfstate" \
     "ARM_SUBSCRIPTION_ID:${subscriptionId}" \
     "ARM_TENANT_ID:${tenantId}" \
     "ARM_CLIENT_ID:${clientId}" \

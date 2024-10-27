@@ -1,6 +1,9 @@
 {
   "REPOS": [
-    "deletemerepo"
+    "cloud",
+    "ot",
+    "secops",
+    "sase"
   ],
   "THEME_REPO_NAME": "docs-theme",
   "LANDING_PAGE_REPO_NAME": "landing-page",
@@ -9,6 +12,6 @@
   "MANIFESTS_REPO_NAME": "manifests",
   "MKDOCS_REPO_NAME": "mkdocs",
   "DEPLOYED": "true",
-  "PROJECT_NAME": "xpertsdev",
+  "PROJECT_NAME": "xpertshandsonlabs",
   "LOCATION": "eastus"
 }

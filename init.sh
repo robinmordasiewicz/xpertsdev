@@ -508,7 +508,7 @@ copy_docs-builder-workflow_to_docs-builder_repo() {
   clone_commands+="        run: |\n"
   clone_commands+="          if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi\n"
   clone_commands+="          echo '\${{ secrets.${landing_page_secret_key_name}}}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519\n"
-  clone_commands+="          mkdir $TEMP_DIR/landing-page\n"
+  clone_commands+="          mkdir \$TEMP_DIR/landing-page\n"
   clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${LANDING_PAGE_REPO_NAME}.git \$TEMP_DIR/landing-page/docs\n\n"
 
   clone_commands+="      - name: Link mkdocs.yml\n"

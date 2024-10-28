@@ -109,7 +109,6 @@ jobs:
       
       - name: Copy Workdir to TEMP_DIR
         run: |
-          mkdir $TEMP_DIR/build
           cp -a $GITHUB_WORKSPACE/* $TEMP_DIR/build
           cp -a $TEMP_DIR/landing-page/site $TEMP_DIR/build/
 

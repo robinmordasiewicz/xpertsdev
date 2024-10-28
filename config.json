@@ -3,7 +3,8 @@
     "cloud",
     "ot",
     "secops",
-    "sase"
+    "sase",
+    "references"
   ],
   "THEME_REPO_NAME": "docs-theme",
   "LANDING_PAGE_REPO_NAME": "landing-page",

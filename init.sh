@@ -526,12 +526,17 @@ copy_docs-builder-workflow_to_docs-builder_repo() {
   clone_commands+="      - name: Clone Content Repos\n"
   clone_commands+="        shell: bash\n"
   clone_commands+="        run: |\n"
+  
 
   for repo in "${CONTENTREPOSONLY[@]}"; do
     local secret_key_name="$(echo "$repo" | tr '[:lower:]-' '[:upper:]_')_SSH_PRIVATE_KEY"
+    clone_commands+="          mkdir -p \$TEMP_DIR/src/${repo}\n"
     clone_commands+="          if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi\n"
     clone_commands+="          echo '\${{ secrets.${secret_key_name} }}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519\n"
-    clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${repo}.git \$TEMP_DIR/docs/${repo}\n"
+    clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${repo}.git \$TEMP_DIR/src/${repo}/docs\n"
+    clone_commands+="          echo '# Hands on Labs' > \$TEMP_DIR/src/${repo}/docs/index.md\n"
+    clone_commands+="          cp -a \$TEMP_DIR/docs/theme \$TEMP_DIR/src/${repo}/docs/\n"
+    clone_commands+="          echo 'INHERIT: docs/theme/mkdocs.yml' > \$TEMP_DIR/src/${repo}/mkdocs.yml\n\n"
   done
 
   echo -e "$clone_commands" | sed -e "/%%INSERTCLONEREPO%%/r /dev/stdin" -e "/%%INSERTCLONEREPO%%/d" "$tpl_file" | awk 'BEGIN { blank=0 } { if (/^$/) { blank++; if (blank <= 1) print; } else { blank=0; print; } }' > "$output_file"

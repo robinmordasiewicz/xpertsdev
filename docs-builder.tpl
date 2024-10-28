@@ -104,10 +104,6 @@ jobs:
 
       %%INSERTCLONEREPO%%
 
-      - name: Create version.md
-        run: |
-          echo "# ${{ env.image_version }}" > $TEMP_DIR/docs/version.md
-
       - name: Build MkDocs site
         run: |
           docker run --rm -v $TEMP_DIR:/docs ${{ secrets.MKDOCS_REPO_NAME }} build -c -d site/

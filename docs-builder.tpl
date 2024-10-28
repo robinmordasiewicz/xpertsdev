@@ -64,6 +64,9 @@ jobs:
       - name: Github repository checkout
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871
  
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349
+
       - name: Check for VERSION file and set version
         id: set_version
         run: |
@@ -103,22 +106,21 @@ jobs:
           echo "TEMP_DIR=$TEMP_DIR" >> $GITHUB_ENV
 
       %%INSERTCLONEREPO%%
-
-      - name: Create htaccess password
-        run: |
-          htpasswd -b -c $TEMP_DIR/.htpasswd ${{ secrets.DOCS_USERNAME }} ${{ secrets.HTPASSWD }}
-  
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349
       
       - name: Copy Workdir to TEMP_DIR
         run: |
-          cp -a $GITHUB_WORKSPACE/* $TEMP_DIR/
+          mkdir $TEMP_DIR/build
+          cp -a $GITHUB_WORKSPACE/* $TEMP_DIR/build
+          cp -a $TEMP_DIR/landing-page/site $TEMP_DIR/build/
+
+      - name: Create htaccess password
+        run: |
+          htpasswd -b -c $TEMP_DIR/build/.htpasswd ${{ secrets.DOCS_USERNAME }} ${{ secrets.HTPASSWD }}
   
       - name: Build and Push Docker Image
         uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75
         with:
-          context: ${{ env.TEMP_DIR }}
+          context: ${{ env.TEMP_DIR }}/build
           push: true
           tags: ${{ secrets.ACR_LOGIN_SERVER }}/docs:${{ env.image_version }},${{ secrets.ACR_LOGIN_SERVER }}/docs:latest
 

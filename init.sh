@@ -525,7 +525,7 @@ copy_docs-builder-workflow_to_docs-builder_repo() {
   clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${THEME_REPO_NAME}.git \$TEMP_DIR/landing-page/docs/theme\n"
   clone_commands+="          docker run --rm -v \$TEMP_DIR/landing-page:/docs \${{ secrets.MKDOCS_REPO_NAME }} build -c -d site/\n"
   clone_commands+="          mkdir -p \$TEMP_DIR/build/\n"
-  clone_commands+="          mv \$TEMP_DIR/landing-page/site \$TEMP_DIR/build/\n\n"
+  clone_commands+="          cp -a \$TEMP_DIR/landing-page/site \$TEMP_DIR/build/\n\n"
 
   clone_commands+="      - name: Clone Content Repos\n"
   clone_commands+="        shell: bash\n"

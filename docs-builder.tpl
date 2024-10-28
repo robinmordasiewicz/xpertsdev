@@ -110,7 +110,6 @@ jobs:
       - name: Copy Workdir to TEMP_DIR
         run: |
           cp -a $GITHUB_WORKSPACE/* $TEMP_DIR/build
-          cp -a $TEMP_DIR/landing-page/site $TEMP_DIR/build/
 
       - name: Create htaccess password
         run: |

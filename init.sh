@@ -445,7 +445,7 @@ create_manifests_secrets() {
 create_content-repo_secrets() {
   for repo in "${CONTENTREPOS[@]}"; do
     for ((attempt=1; attempt<=max_retries; attempt++)); do
-      if gh secret set "DOCS_BUILDER_REPO_NAME" -b "${GITHUB_ORG}/${DOCS_BUILDER_REPO_NAME}" --repo ${GITHUB_ORG}/$repo; then
+      if gh secret set "DOCS_BUILDER_REPO_NAME" -b "${DOCS_BUILDER_REPO_NAME}" --repo ${GITHUB_ORG}/$repo; then
         break
       else
         if [[ $attempt -lt $max_retries ]]; then

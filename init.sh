@@ -145,11 +145,19 @@ copy_dispatch-workflow_to_content_repos() {
   cd "$current_dir" || exit 1
 }
 
-
-# Function to log in to Azure if not already logged in
 ensure_azure_login() {
+  # Check if the account is currently active
   if ! az account show &>/dev/null; then
+    echo "No active Azure session found. Logging in..."
     az login --use-device-code
+  else
+    # Check if the token is still valid
+    if ! az account get-access-token &>/dev/null; then
+      echo "Azure login has expired. Logging in again..."
+      az login --use-device-code
+    else
+      echo "Azure login is active."
+    fi
   fi
 }
 
@@ -246,7 +254,7 @@ update_DOCS_HTPASSWD() {
             read -srp "Enter new value for Docs HTPASSWD: " new_htpasswd_value
             echo
             if gh secret set HTPASSWD -b "$new_htpasswd_value" --repo ${GITHUB_ORG}/$DOCS_BUILDER_REPO_NAME; then
-              break
+              echo "Updated Docs Password"
             else
               if [[ $attempt -lt $max_retries ]]; then
                 echo "Warning: Failed to set GitHub secret HTPASSWD. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
@@ -261,7 +269,7 @@ update_DOCS_HTPASSWD() {
         read -srp "Enter value for Docs HTPASSWD: " new_htpasswd_value
         echo
         if gh secret set HTPASSWD -b "$new_htpasswd_value" --repo ${GITHUB_ORG}/$DOCS_BUILDER_REPO_NAME; then
-          break
+          echo "Updated Docs Password"
         else
           if [[ $attempt -lt $max_retries ]]; then
             echo "Warning: Failed to set GitHub secret HTPASSWD. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."

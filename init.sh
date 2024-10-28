@@ -536,7 +536,9 @@ copy_docs-builder-workflow_to_docs-builder_repo() {
     clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${repo}.git \$TEMP_DIR/src/${repo}/docs\n"
     clone_commands+="          echo '# Hands on Labs' > \$TEMP_DIR/src/${repo}/docs/index.md\n"
     clone_commands+="          cp -a \$TEMP_DIR/docs/theme \$TEMP_DIR/src/${repo}/docs/\n"
-    clone_commands+="          echo 'INHERIT: docs/theme/mkdocs.yml' > \$TEMP_DIR/src/${repo}/mkdocs.yml\n\n"
+    clone_commands+="          echo 'INHERIT: docs/theme/mkdocs.yml' > \$TEMP_DIR/src/${repo}/mkdocs.yml\n"
+    clone_commands+="          docker run --rm -v $TEMP_DIR/src/${repo}:/docs ${{ secrets.MKDOCS_REPO_NAME }} build -d site/\n"
+    clone_commands+="          mv $TEMP_DIR/src/${repo}/site $TEMP_DIR/docs/site/{repo}\n\n"
   done
 
   echo -e "$clone_commands" | sed -e "/%%INSERTCLONEREPO%%/r /dev/stdin" -e "/%%INSERTCLONEREPO%%/d" "$tpl_file" | awk 'BEGIN { blank=0 } { if (/^$/) { blank++; if (blank <= 1) print; } else { blank=0; print; } }' > "$output_file"

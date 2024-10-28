@@ -444,18 +444,24 @@ create_manifests_secrets() {
 
 create_content-repo_secrets() {
   for repo in "${CONTENTREPOS[@]}"; do
-    for ((attempt=1; attempt<=max_retries; attempt++)); do
-      if gh secret set "DOCS_BUILDER_REPO_NAME" -b "${DOCS_BUILDER_REPO_NAME}" --repo ${GITHUB_ORG}/$repo; then
-        break
-      else
-        if [[ $attempt -lt $max_retries ]]; then
-          echo "Warning: Failed to set GitHub secret DOCS_BUILDER_REPO_NAME. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
-          sleep $retry_interval
+    for secret in \
+      "DOCS_BUILDER_REPO_NAME:$DOCS_BUILDER_REPO_NAME" \
+      "PAT:$PAT"; do
+      key="${secret%%:*}"
+      value="${secret#*:}"
+      for ((attempt=1; attempt<=max_retries; attempt++)); do
+        if gh secret set "$key" -b "$value" --repo ${GITHUB_ORG}/$repo; then
+          break
         else
-          echo "Error: Failed to set GitHub secret DOCS_BUILDER_REPO_NAME after $max_retries attempts. Exiting."
-          exit 1
+          if [[ $attempt -lt $max_retries ]]; then
+            echo "Warning: Failed to set GitHub secret $key. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
+            sleep $retry_interval
+          else
+            echo "Error: Failed to set GitHub secret $key after $max_retries attempts. Exiting."
+            exit 1
+          fi
         fi
-      fi
+      done
     done
   done
 }

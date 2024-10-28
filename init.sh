@@ -521,12 +521,12 @@ copy_docs-builder-workflow_to_docs-builder_repo() {
   clone_commands+="        run: |\n"
   clone_commands+="          if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi\n"
   clone_commands+="          echo '\${{ secrets.${theme_secret_key_name}}}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519\n"
-  clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${THEME_REPO_NAME}.git \$TEMP_DIR/docs/theme\n\n"
-  
+  clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${THEME_REPO_NAME}.git \$TEMP_DIR/docs/theme\n"
+  clone_commands+="          docker run --rm -v \$TEMP_DIR:/docs \${{ secrets.MKDOCS_REPO_NAME }} build -c -d site/\n\n"
+
   clone_commands+="      - name: Clone Content Repos\n"
   clone_commands+="        shell: bash\n"
   clone_commands+="        run: |\n"
-  
 
   for repo in "${CONTENTREPOSONLY[@]}"; do
     local secret_key_name="$(echo "$repo" | tr '[:lower:]-' '[:upper:]_')_SSH_PRIVATE_KEY"

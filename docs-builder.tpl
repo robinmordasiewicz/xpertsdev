@@ -104,10 +104,6 @@ jobs:
 
       %%INSERTCLONEREPO%%
 
-      - name: Build MkDocs site
-        run: |
-          docker run --rm -v $TEMP_DIR:/docs ${{ secrets.MKDOCS_REPO_NAME }} build -c -d site/
-
       - name: Create htaccess password
         run: |
           htpasswd -b -c $TEMP_DIR/.htpasswd ${{ secrets.DOCS_USERNAME }} ${{ secrets.HTPASSWD }}

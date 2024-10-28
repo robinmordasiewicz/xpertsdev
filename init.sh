@@ -14,6 +14,7 @@ fi
 # Constants
 DEPLOYED=$(jq -r '.DEPLOYED' "$INITJSON")
 PROJECT_NAME=$(jq -r '.PROJECT_NAME' "$INITJSON")
+DOCS_USERNAME=$(jq -r '.PROJECT_NAME' "$INITJSON")
 LOCATION=$(jq -r '.LOCATION' "$INITJSON")
 THEME_REPO_NAME=$(jq -r '.THEME_REPO_NAME' "$INITJSON")
 LANDING_PAGE_REPO_NAME=$(jq -r '.LANDING_PAGE_REPO_NAME' "$INITJSON")
@@ -381,7 +382,7 @@ create_docs-builder_secrets() {
   local secret_key
 
   for secret in \
-    "PROJECT_NAME:${PROJECT_NAME}" \
+    "DOCS_USERNAME:${DOCS_USERNAME}" \
     "AZURE_CREDENTIALS:${AZURE_CREDENTIALS}" \
     "ARM_CLIENT_ID:${clientId}" \
     "ARM_CLIENT_SECRET:${clientSecret}" \

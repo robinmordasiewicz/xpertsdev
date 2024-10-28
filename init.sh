@@ -523,7 +523,8 @@ copy_docs-builder-workflow_to_docs-builder_repo() {
   clone_commands+="          if [ -f ~/.ssh/id_ed25519 ]; then chmod 600 ~/.ssh/id_ed25519; fi\n"
   clone_commands+="          echo '\${{ secrets.${theme_secret_key_name}}}' > ~/.ssh/id_ed25519 && chmod 400 ~/.ssh/id_ed25519\n"
   clone_commands+="          git clone git@github.com:\${{ github.repository_owner }}/${THEME_REPO_NAME}.git \$TEMP_DIR/landing-page/docs/theme\n"
-  clone_commands+="          docker run --rm -v \$TEMP_DIR/landing-page:/docs \${{ secrets.MKDOCS_REPO_NAME }} build -c -d site/\n\n"
+  clone_commands+="          docker run --rm -v \$TEMP_DIR/landing-page:/docs \${{ secrets.MKDOCS_REPO_NAME }} build -c -d site/\n"
+  lone_commands+="           mv \$TEMP_DIR/landing-page/site \$TEMP_DIR/build/\n\n"
 
   clone_commands+="      - name: Clone Content Repos\n"
   clone_commands+="        shell: bash\n"
@@ -539,7 +540,7 @@ copy_docs-builder-workflow_to_docs-builder_repo() {
     clone_commands+="          cp -a \$TEMP_DIR/landing-page/docs/theme \$TEMP_DIR/src/${repo}/docs/\n"
     clone_commands+="          echo 'INHERIT: docs/theme/mkdocs.yml' > \$TEMP_DIR/src/${repo}/mkdocs.yml\n"
     clone_commands+="          docker run --rm -v \$TEMP_DIR/src/${repo}:/docs \${{ secrets.MKDOCS_REPO_NAME }} build -d site/\n"
-    clone_commands+="          mv \$TEMP_DIR/src/${repo}/site \$TEMP_DIR/landing-page/site/${repo}\n\n"
+    clone_commands+="          mv \$TEMP_DIR/src/${repo}/site \$TEMP_DIR/build/site/${repo}\n\n"
   done
 
   echo -e "$clone_commands" | sed -e "/%%INSERTCLONEREPO%%/r /dev/stdin" -e "/%%INSERTCLONEREPO%%/d" "$tpl_file" | awk 'BEGIN { blank=0 } { if (/^$/) { blank++; if (blank <= 1) print; } else { blank=0; print; } }' > "$output_file"

@@ -308,7 +308,7 @@ update_HUB_NVA_CREDENTIALS() {
         read -srp "Enter value for Hub NVA Password: " new_htpasswd_value
         echo
         if gh secret set HUB_NVA_PASSWORD -b "$new_htpasswd_value" --repo ${GITHUB_ORG}/$INFRASTRUCTURE_REPO_NAME; then
-          break
+          echo "Password set"
         else
           if [[ $attempt -lt $max_retries ]]; then
             echo "Warning: Failed to set GitHub secret HUB_NVA_PASSWORD. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
@@ -319,7 +319,7 @@ update_HUB_NVA_CREDENTIALS() {
           fi
         fi
         if gh secret set HUB_NVA_USERNAME -b "${GITHUB_ORG}"  --repo ${GITHUB_ORG}/$INFRASTRUCTURE_REPO_NAME; then
-          break
+          becho "Username set"
         else
           if [[ $attempt -lt $max_retries ]]; then
             echo "Warning: Failed to set GitHub secret HUB_NVA_USERNAME. Attempt $attempt of $max_retries. Retrying in $retry_interval seconds..."
